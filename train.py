@@ -40,7 +40,7 @@ imgFiles, pose2, pose3 = utils.data_prep.get_list_all_training_frames(mFiles)
 
 
 image_b, pose2_b, pose3_b = utils.data_prep.get_batch(imgFiles,
-                                                      pose2, pose3, 128)
+                                                      pose2, pose3, 8)
 
 
 image_b, pose2_b, pose3_b = utils.data_prep.crop_data_top_down(image_b,
@@ -54,13 +54,18 @@ image_b, pose2_b, pose3_b = utils.data_prep.crop_data_top_down(image_b,
 batch_data,image, pose2, pose3 = utils.data_prep.volumize_gt(image_b,pose2_b,
                                                            pose3_b,64, 128,2)
 
+batch_output = utils.data_prep.prepare_output(batch_data)
+
+print (np.shape(batch_output))
+
+
 with tf.Graph().as_default():
-  DEVICE = '/cpu:0'
+  DEVICE = '/gpu:0'
   with tf.device(DEVICE):
       print ("start build model...")
       _x = tf.placeholder(tf.float32, [None, 256, 256, 3])
-      y = tf.placeholder(tf.float32, [8, None, 64, 64, 16])
-      output = hg.stacked_hourglass(8,'stacked_hourglass')(_x)
+      y = tf.placeholder(tf.float32, [4, None, 64, 64, 16])
+      output = hg.stacked_hourglass(4,'stacked_hourglass')(_x)
       loss = tf.reduce_mean(tf.square(output - y))
       rmsprop = tf.train.RMSPropOptimizer(2.5e-4)
       print ("build finished...")
@@ -73,7 +78,7 @@ with tf.Graph().as_default():
           sess.run(init)
       print ("test...")
       xarr = np.random.rand(100, 6, 256, 256, 3)
-      yarr = np.random.rand(100, 8, 6, 64, 64, 16)
+      yarr = np.random.rand(100, 4, 6, 64, 64, 16)
       _time = time.clock()
       with tf.device(DEVICE):
           for u in range(0, 100):

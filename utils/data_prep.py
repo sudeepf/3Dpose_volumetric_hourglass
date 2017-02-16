@@ -142,3 +142,23 @@ def volumize_gt(image_b, pose2_b, pose3_b, resize_factor, im_resize_factor, \
 		image.append(im_)
 		
 	return  batch_data,image, pose2, pose3
+
+def prepare_output(batch_data,steps = [1, 2, 4, 64]):
+	out_res = np.shape(batch_data[0])[1]
+	output = []
+	for data in batch_data:
+		out_i = np.empty((0, out_res, out_res))
+		for j in range(0,out_res*14,out_res):
+			data_j = data[j*out_res:(j+1)*out_res]
+			out_ = np.empty((0, out_res, out_res))
+			for ii in steps:
+				slice_ind = out_res/ii
+				slice_start = 0
+				for slice_end in range(slice_ind-1, out_res, slice_ind):
+					slice_  = np.sum(data_j[slice_start:slice_end+1],axis=0)
+					slice_ = np.expand_dims(slice_,axis=0)
+					slice_start = slice_end+1
+					out_ = np.concatenate((out_,slice_),axis=0)
+			out_i = np.concatenate((out_i,out_),axis=0)
+		output.append(out_i)
+	return output
