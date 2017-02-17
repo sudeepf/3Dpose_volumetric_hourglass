@@ -12,6 +12,7 @@ import sys
 import numpy as np
 import time
 import hourglass_TF.src.stacked_hourglass as hg
+import matplotlib.pyplot as plt
 
 #Path to the Dataset or the subject folders
 
@@ -52,35 +53,78 @@ image_b, pose2_b, pose3_b = utils.data_prep.crop_data_top_down(image_b,
 
 
 batch_data,image, pose2, pose3 = utils.data_prep.volumize_gt(image_b,pose2_b,
-                                                           pose3_b,64, 128,2)
+                                                           pose3_b,64, 256,2)
+print(np.shape(batch_data))
+batch_data = np.swapaxes(batch_data,0,1) #swap Batch - Joint
+batch_data = np.swapaxes(batch_data,0,2) #swap Joint - Depth
+batch_data = np.swapaxes(batch_data,2,4) #swap Joint - X
+batch_data = np.swapaxes(batch_data,0,2) #swap Depth - X#
+# X - Batch - Depth - Y - Joint
+print(np.shape(batch_data))
 
 batch_output = utils.data_prep.prepare_output(batch_data)
+batch_output = np.swapaxes(batch_output,2,4)
+batch_output = np.swapaxes(batch_output,2,3)
+fig = plt.figure()
+a=fig.add_subplot(1,2,1)
+plt.imshow(np.sum(batch_output[0,0,:,:,:],axis=2))
+a=fig.add_subplot(1,2,2)
+plt.imshow(image[0])
+plt.show()
+
+utils.data_prep.plot_3d(np.sum(batch_output[7:71,0,:,:,:],axis=3))
 
 print (np.shape(batch_output))
 
+#Wouldnt it be a great idea to test the fucked up code that i just wrote
+#Lets do that by first ploting 3D model
+print ( np.shape(np.sum(batch_output[7:71,0,:,:,:], axis=3)))
+#utils.data_prep.plot_3d( np.sum(batch_output[7:71,0,:,:,:],
+#                                               axis=1))
+
+#The Great Parameter of Steps
+#Choose it wisely
+steps = [1, 2, 4, 64]
 
 with tf.Graph().as_default():
-  DEVICE = '/gpu:0'
-  with tf.device(DEVICE):
-      print ("start build model...")
-      _x = tf.placeholder(tf.float32, [None, 256, 256, 3])
-      y = tf.placeholder(tf.float32, [4, None, 64, 64, 16])
-      output = hg.stacked_hourglass(4,'stacked_hourglass')(_x)
-      loss = tf.reduce_mean(tf.square(output - y))
-      rmsprop = tf.train.RMSPropOptimizer(2.5e-4)
-      print ("build finished...")
-  train_step = tf.Variable(0, name='global_step', trainable=False)
-  with tf.device(DEVICE):
-      train_rmsprop = rmsprop.minimize(loss, train_step)
-  init = tf.global_variables_initializer()
-  with tf.Session() as sess:
-      with tf.device(DEVICE):
-          sess.run(init)
-      print ("test...")
-      xarr = np.random.rand(100, 6, 256, 256, 3)
-      yarr = np.random.rand(100, 4, 6, 64, 64, 16)
-      _time = time.clock()
-      with tf.device(DEVICE):
-          for u in range(0, 100):
-              sess.run(train_rmsprop, feed_dict={_x:xarr[u], y:yarr[u]})
-      print ("test:", time.clock() - _time)
+	#Testing with only one GPU as of now
+	DEVICE = '/gpu:0'
+	#Assign the DEvice
+	with tf.device(DEVICE):
+		#first Build Model and define all the place holders
+		# This can go to another file under name model
+		# These parameters can be read from a external config file
+		print ("start build model...")
+		_x = tf.placeholder(tf.float32, [None, 256, 256, 3])
+		y = tf.placeholder(tf.float32, [np.sum(np.array(steps)), None, 64,
+                                    64, 14])
+		# Calling external stacked_hourglass Function
+		#ToDo : Change the hourglass implementation and make it more coustomizable
+		output = hg.stacked_hourglass(np.sum(np.array(steps)),'stacked_hourglass')(_x)
+		#Defining Loss with root mean square error
+		loss = tf.reduce_mean(tf.square(output - y))
+		#Defining optimizer over loss
+		rmsprop = tf.train.RMSPropOptimizer(2.5e-4)
+		print ("build finished, There she stands, tall and strong...")
+    
+	train_step = tf.Variable(0, name='global_step', trainable=False)
+	with tf.device(DEVICE):
+		train_rmsprop = rmsprop.minimize(loss, train_step)
+  
+	# Initializing all the variable in TF
+	# Noting that the function depends on the version of the TF
+	init = tf.global_variables_initializer()
+  
+	#Now standard TF session and training loops resides inside this fu*ker
+	with tf.Session() as sess:
+		with tf.device(DEVICE):
+		# All the variable initialiezed in MoFoking RunTime
+		#Confusing the world gets when yoda asks initializer operator before
+			sess.run(init)
+			print ("Let the Training Begin...")
+			xarr = np.random.rand(100, 6, 256, 256, 3)
+			yarr = np.random.rand(100, 4, 6, 64, 64, 14)
+			_time = time.clock()
+			with tf.device(DEVICE):
+				sess.run(train_rmsprop, feed_dict={_x:image, y:batch_output})
+			print ("test:", time.clock() - _time)
