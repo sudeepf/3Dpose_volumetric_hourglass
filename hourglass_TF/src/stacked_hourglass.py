@@ -2,8 +2,9 @@
 import tensorflow as tf
 
 class stacked_hourglass():
-	def __init__(self, nb_stack, name='stacked_hourglass'):
-		self.nb_stack = nb_stack
+	def __init__(self, steps, name='stacked_hourglass'):
+		self.nb_stack = len(steps)
+		self.steps = steps
 		self.name = name
 	
 	def __call__(self, x):
@@ -28,7 +29,7 @@ class stacked_hourglass():
 				hg[0] = self._hourglass(r3, 4, 256, '_hourglass')
 				ll[0] = self._conv_bn_relu(hg[0], 256, name='conv_1')
 				ll_[0] = self._conv(ll[0], 256, 1, 1, 'VALID', 'll')
-				out[0] = self._conv(ll[0], 14, 1, 1, 'VALID', 'out')
+				out[0] = self._conv(ll[0], 14*self.steps[0], 1, 1, 'VALID', 'out')
 				out_[0] = self._conv(out[0], 256, 1, 1, 'VALID', 'out_')
 				sum_[0] = tf.add_n([ll_[0], out_[0], r3])
 			for i in range(1, self.nb_stack - 1):
@@ -36,7 +37,7 @@ class stacked_hourglass():
 					hg[i] = self._hourglass(sum_[i - 1], 4, 256, '_hourglass')
 					ll[i] = self._conv_bn_relu(hg[i], 256, name='conv_1')
 					ll_[i] = self._conv(ll[i], 256, 1, 1, 'VALID', 'll')
-					out[i] = self._conv(ll[i], 14, 1, 1, 'VALID', 'out')
+					out[i] = self._conv(ll[i], 14*self.steps[i], 1, 1, 'VALID', 'out')
 					out_[i] = self._conv(out[i], 256, 1, 1, 'VALID', 'out_')
 					sum_[i] = tf.add_n([ll_[i], out_[i], sum_[i - 1]])
 			with tf.name_scope(
@@ -45,9 +46,11 @@ class stacked_hourglass():
 				                                        '_hourglass')
 				ll[self.nb_stack - 1] = self._conv_bn_relu(hg[self.nb_stack - 1], 256,
 				                                           name='conv_1')
-				out[self.nb_stack - 1] = self._conv(ll[self.nb_stack - 1], 14, 1, 1,
+				out[self.nb_stack - 1] = self._conv(ll[self.nb_stack - 1],
+				                                    14*self.steps[self.nb_stack - 1],
+				                                    1, 1,
 				                                    'VALID', 'out')
-			return tf.stack(out)
+			return tf.concat(out, axis=3)
 	
 	def _conv(self, inputs, nb_filter, kernel_size=1, strides=1, pad='VALID',
 	          name='conv'):

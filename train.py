@@ -33,8 +33,16 @@ for ind, folder in enumerate(onlyFolders):
 	mFiles_ = [join(join(join(data_path,folder),'mats'), f) for f in listdir(
 		mat_folder_path) if f.split('.')[-1] == 'mat']
 	mFiles += mFiles_
-	
-	
+
+# Parameters
+batch_size = 8
+volume_res = 64
+num_joints = 14
+#The Great Parameter of Steps
+#Choose it wisely
+steps = [1, 2, 4, 64]
+total_dim = np.sum(np.array(steps))
+
 # Read all the mat files and merge the training data
 
 imgFiles, pose2, pose3 = utils.data_prep.get_list_all_training_frames(mFiles)
@@ -49,42 +57,54 @@ image_b, pose2_b, pose3_b = utils.data_prep.crop_data_top_down(image_b,
                                                                pose3_b, Cam_C)
 
 #Visualization of data to check if all went right
-#utils.data_prep.data_vis(image_b, pose2_b, pose3_b, Cam_C, 100)
+#utils.data_prep.data_vis(image_b, pose2_b, pose3_b, Cam_C, 0)
 
 
 batch_data,image, pose2, pose3 = utils.data_prep.volumize_gt(image_b,pose2_b,
                                                            pose3_b,64, 256,2)
-print(np.shape(batch_data))
-batch_data = np.swapaxes(batch_data,0,1) #swap Batch - Joint
-batch_data = np.swapaxes(batch_data,0,2) #swap Joint - Depth
-batch_data = np.swapaxes(batch_data,2,4) #swap Joint - X
-batch_data = np.swapaxes(batch_data,0,2) #swap Depth - X#
-# X - Batch - Depth - Y - Joint
-print(np.shape(batch_data))
+#print(np.shape(batch_data))
+#Batch - Joints - X - Y - Z
+batch_data = np.swapaxes(batch_data,1,4) #swap Z - Joint
+#Batch - Z - X - Y - Joints
+batch_data = np.swapaxes(batch_data,0,1) #swap Joint - Depth
+#Z- Batch - X - Y - Joints
+
+#print(np.shape(batch_data))
 
 batch_output = utils.data_prep.prepare_output(batch_data)
-batch_output = np.swapaxes(batch_output,2,4)
-batch_output = np.swapaxes(batch_output,2,3)
-fig = plt.figure()
-a=fig.add_subplot(1,2,1)
-plt.imshow(np.sum(batch_output[0,0,:,:,:],axis=2))
-a=fig.add_subplot(1,2,2)
-plt.imshow(image[0])
-plt.show()
+# 3D - Batch - Joints - X - Y
+#print(np.shape(batch_output))
+batch_output = np.rollaxis(batch_output, 3, 1)
+# Batch - Joints - X - Y - 3D
+#print(np.shape(batch_output))
+batch_output = np.rollaxis(batch_output, 4, 2)
+# Batch - X - Y - 3D - Joints
+#print(np.shape(batch_output))
+#print(np.shape(batch_output[0,:,:,0,:]))
 
-utils.data_prep.plot_3d(np.sum(batch_output[7:71,0,:,:,:],axis=3))
+#fig = plt.figure()
+#a=fig.add_subplot(1,2,1)
+#plt.imshow(np.sum(batch_output[0,:,:,0,:],axis=2))
+#a=fig.add_subplot(1,2,2)
+#plt.imshow(image[0])
+#plt.show()
 
-print (np.shape(batch_output))
+batch_output = np.reshape(batch_output,(batch_size,volume_res,volume_res,
+                                        total_dim*num_joints))
+#print(np.shape(batch_output))
+
+
+#utils.data_prep.plot_3d(np.sum(batch_output[7:71,0,:,:,:],axis=3))
+
+#print (np.shape(batch_output))
 
 #Wouldnt it be a great idea to test the fucked up code that i just wrote
 #Lets do that by first ploting 3D model
-print ( np.shape(np.sum(batch_output[7:71,0,:,:,:], axis=3)))
+#print ( np.shape(np.sum(batch_output[7:71,0,:,:,:], axis=3)))
 #utils.data_prep.plot_3d( np.sum(batch_output[7:71,0,:,:,:],
 #                                               axis=1))
 
-#The Great Parameter of Steps
-#Choose it wisely
-steps = [1, 2, 4, 64]
+
 
 with tf.Graph().as_default():
 	#Testing with only one GPU as of now
@@ -96,11 +116,11 @@ with tf.Graph().as_default():
 		# These parameters can be read from a external config file
 		print ("start build model...")
 		_x = tf.placeholder(tf.float32, [None, 256, 256, 3])
-		y = tf.placeholder(tf.float32, [np.sum(np.array(steps)), None, 64,
-                                    64, 14])
+		y = tf.placeholder(tf.float32, [None, 64,
+                                    64, num_joints*total_dim])
 		# Calling external stacked_hourglass Function
 		#ToDo : Change the hourglass implementation and make it more coustomizable
-		output = hg.stacked_hourglass(np.sum(np.array(steps)),'stacked_hourglass')(_x)
+		output = hg.stacked_hourglass(steps,'stacked_hourglass')(_x)
 		#Defining Loss with root mean square error
 		loss = tf.reduce_mean(tf.square(output - y))
 		#Defining optimizer over loss
@@ -116,6 +136,7 @@ with tf.Graph().as_default():
 	init = tf.global_variables_initializer()
   
 	#Now standard TF session and training loops resides inside this fu*ker
+	writer = tf.summary.FileWriter('/tmp/tensorflow/', graph=tf.get_default_graph())
 	with tf.Session() as sess:
 		with tf.device(DEVICE):
 		# All the variable initialiezed in MoFoking RunTime

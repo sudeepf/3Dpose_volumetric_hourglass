@@ -58,14 +58,13 @@ def crop_data_top_down(images, pose2, pose3, Cam_C):
 		hW /= 2
 		hW += incSiz
 		skw = [verSkw,horizSkw]
-		min_ = midP -  skw * np.array(hW*2)
+		min_ = midP - skw * np.array(hW)
 		min_ = min_.astype(np.int)
 		hW *= 2
 		hW = hW.astype(np.int)
 		im_ = im[min_[1]:(min_[1]+hW),min_[0]:(min_[0]+hW)]
 		p2 -= min_
 		p3[:,:2] -= min_
-		#print(min_ , midP, skw , np.array(hW))
 		images_.append(im_)
 		pose2_.append(p2)
 		pose3_.append(p3)
@@ -117,6 +116,7 @@ def volumize_gt(image_b, pose2_b, pose3_b, resize_factor, im_resize_factor, \
 	pose3 = []
 	image = []
 	for ii in xrange(num_of_data):
+		print (ii, im_resize_factor, np.shape(image_b[ii]))
 		im_ = misc.imresize(image_b[ii],(im_resize_factor,im_resize_factor))
 		size_scale_ = np.array(np.shape(image_b[ii])[:2], dtype=np.float) / \
 		              np.array(resize_factor, dtype=np.float)
