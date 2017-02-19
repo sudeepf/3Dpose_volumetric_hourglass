@@ -16,7 +16,7 @@ import matplotlib.pyplot as plt
 
 #Path to the Dataset or the subject folders
 
-data_path = './Dataset/'
+data_path = '/home/capstone/datasets/Human3.6M/Subjects/'
 model_path = './Reference/pose-hg-train-master/src/models'
 #Camera Params
 Cam_C = [512.53, 515.49]
@@ -33,17 +33,19 @@ for ind, folder in enumerate(onlyFolders):
 	mFiles_ = [join(join(join(data_path,folder),'mats'), f) for f in listdir(
 		mat_folder_path) if f.split('.')[-1] == 'mat']
 	mFiles += mFiles_
+	if ind==1:
+		break
 
 # Parameters
-batch_size = 8
+batch_size = 16
 volume_res = 64
 num_joints = 14
 #The Great Parameter of Steps
 #Choose it wisely
 #steps = [1, 2, 4, 64]
-steps = [1]
+steps = [1,1]
 total_dim = np.sum(np.array(steps))
-
+summery_path = './tensor_record/'
 # Read all the mat files and merge the training data
 
 imgFiles, pose2, pose3 = utils.data_prep.get_list_all_training_frames(mFiles)
@@ -54,7 +56,7 @@ def feed_dict(train, imgFiles, pose2, pose3, mask):
 	"""Make a TensorFlow feed_dict: maps data onto Tensor placeholders."""
 	if train or not(train):
 		image_b, pose2_b, pose3_b = utils.data_prep.get_batch(imgFiles,
-		                                                      pose2, pose3, 8, mask)
+		                                                      pose2, pose3, batch_size, mask)
 		
 		image_b, pose2_b, pose3_b = utils.data_prep.crop_data_top_down(image_b,
 		                                                               pose2_b,
@@ -109,7 +111,7 @@ def feed_dict(train, imgFiles, pose2, pose3, mask):
 # Build Model
 with tf.Graph().as_default():
 	#Testing with only one GPU as of now
-	DEVICE = '/gpu:0'
+	DEVICE = '/gpu:1'
 	#Assign the DEvice
 	with tf.device(DEVICE):
 		#first Build Model and define all the place holders
@@ -129,7 +131,7 @@ with tf.Graph().as_default():
 		#Printing Loss
 	
 		
-		print ("build finished, There she stands, tall and strong...")
+		print ("build finished, There it stands, tall and strong...")
 	tf.summary.scalar('loss', loss)
 	train_step = tf.Variable(0, name='global_step', trainable=False)
 	with tf.device(DEVICE):
@@ -146,14 +148,14 @@ with tf.Graph().as_default():
 		#Confusing the world gets when yoda asks initializer operator before
 			
 			
-			train_writer = tf.summary.FileWriter( '/tmp/tensorflow/' + '/train', \
+			train_writer = tf.summary.FileWriter( summery_path + '/train', \
 			               sess.graph)
-			test_writer = tf.summary.FileWriter('/tmp/tensorflow/' + '/test')
+			test_writer = tf.summary.FileWriter(summery_path + '/test')
 			
 			tf.global_variables_initializer().run()
 			
 			# Now standard TF session and training loops resides inside this fu*ker
-			writer = tf.summary.FileWriter('/tmp/tensorflow/',
+			writer = tf.summary.FileWriter(summery_path,
 			                               graph=tf.get_default_graph())
 			
 			print ("Let the Training Begin...")
