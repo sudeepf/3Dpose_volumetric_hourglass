@@ -26,8 +26,8 @@ def shuffle_data(imgFiles, pose2, pose3):
 	pose3_ = pose3[:num, :, :]
 	return imgFiles_, pose2_, pose3_
 
-def get_batch(imgFiles, pose2, pose3, num):
-	mask = np.random.permutation(np.shape(imgFiles)[0])[:num]
+def get_batch(imgFiles, pose2, pose3, num, mask):
+	mask = mask[:num]
 	imgFiles_ = imgFiles[mask]
 	pose2_ = pose2[mask,:,:]
 	pose3_ = pose3[mask,:,:]
