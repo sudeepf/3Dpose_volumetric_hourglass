@@ -40,7 +40,8 @@ volume_res = 64
 num_joints = 14
 #The Great Parameter of Steps
 #Choose it wisely
-steps = [1, 2, 4, 64]
+#steps = [1, 2, 4, 64]
+steps = [1]
 total_dim = np.sum(np.array(steps))
 
 # Read all the mat files and merge the training data
@@ -77,7 +78,7 @@ def feed_dict(train, imgFiles, pose2, pose3, mask):
 		
 		# print(np.shape(batch_data))
 		
-		batch_output = utils.data_prep.prepare_output(batch_data)
+		batch_output = utils.data_prep.prepare_output(batch_data,steps)
 		# 3D - Batch - Joints - X - Y
 		# print(np.shape(batch_output))
 		batch_output = np.rollaxis(batch_output, 3, 1)
@@ -168,18 +169,18 @@ with tf.Graph().as_default():
 				mask_ = mask[offset:(offset + batch_size)]
 				if step % 10 == 0:  # Record summaries and test-set accuracy
 					fD = feed_dict(True, imgFiles, pose2, pose3, mask_)
-					summary, loss = sess.run([merged, loss], feed_dict={_x: fD[0],
+					print ( np.shape(fD[1]))
+					summary, loss_ = sess.run([merged, loss], feed_dict={_x: fD[0],
 					                                                    y:fD[1]})
 					test_writer.add_summary(summary, step)
-					print('Accuracy at step %s: %s' % (step, loss))
+					print('Loss at step %s: %s' % (step, loss_))
 				else:  # Record train set summaries, and train
 					if step % 100 == 99:  # Record execution stats
 						run_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
 						run_metadata = tf.RunMetadata()
 						fD = feed_dict(True, imgFiles, pose2, pose3, mask_)
 						summary, _ = sess.run([merged, train_step], feed_dict={_x: fD[0], \
-						                                                          y: fD[
-							                                                          1]},options=run_options,
+						                        y: fD[1]}, options=run_options,
 			                              run_metadata=run_metadata)
 							
 						train_writer.add_run_metadata(run_metadata, 'step%03d' % step)
@@ -187,8 +188,9 @@ with tf.Graph().as_default():
 						print('Adding run metadata for', step)
 					else:  # Record a summary
 						fD = feed_dict(True, imgFiles, pose2, pose3, mask_)
-						summary, _ = sess.run([merged, train_step], feed_dict={_x: fD[0], \
-						                                                          y: fD[1]})
+						summary, loss_, _ = sess.run([merged, loss, train_step],
+						                         feed_dict={_x: fD[0], y: fD[1]})
 						train_writer.add_summary(summary, step)
+						print("Grinding... Loss = " + str(loss_))
 			train_writer.close()
 			test_writer.close()

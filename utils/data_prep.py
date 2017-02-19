@@ -116,7 +116,7 @@ def volumize_gt(image_b, pose2_b, pose3_b, resize_factor, im_resize_factor, \
 	pose3 = []
 	image = []
 	for ii in xrange(num_of_data):
-		print (ii, im_resize_factor, np.shape(image_b[ii]))
+		#print (ii, im_resize_factor, np.shape(image_b[ii]))
 		im_ = misc.imresize(image_b[ii],(im_resize_factor,im_resize_factor))
 		size_scale_ = np.array(np.shape(image_b[ii])[:2], dtype=np.float) / \
 		              np.array(resize_factor, dtype=np.float)
