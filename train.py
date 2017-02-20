@@ -39,7 +39,7 @@ for ind, folder in enumerate(onlyFolders):
 		break
 
 # Parameters
-batch_size = 16
+batch_size = 64
 volume_res = 64
 num_joints = 14
 #The Great Parameter of Steps
@@ -128,7 +128,7 @@ with tf.Graph().as_default():
 	#Defining Loss with root mean square error
 	loss = tf.reduce_mean(tf.square(output - y))
 	#Defining optimizer over loss
-	rmsprop = tf.train.RMSPropOptimizer(2.5e-4)
+	rmsprop = tf.train.RMSPropOptimizer(2.5e-2)
 	#Printing Loss
 
 	
@@ -143,7 +143,7 @@ with tf.Graph().as_default():
 	config = tf.ConfigProto()
 	config.gpu_options.allow_growth = True
 	
-	with tf.Session(config) as sess:
+	with tf.Session(config=config) as sess:
 		merged = tf.summary.merge_all()
 		saver = tf.train.Saver()
 		# All the variable initialiezed in MoFoking RunTime
