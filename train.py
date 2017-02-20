@@ -35,13 +35,13 @@ for ind, folder in enumerate(onlyFolders):
 	mFiles += mFiles_
 
 # Parameters
-batch_size = 8
+batch_size = 64
 volume_res = 64
 num_joints = 14
 #The Great Parameter of Steps
 #Choose it wisely
 #steps = [1, 2, 4, 64]
-steps = [1]
+steps = [1, 1, 1, 1]
 total_dim = np.sum(np.array(steps))
 
 # Read all the mat files and merge the training data
@@ -54,7 +54,9 @@ def feed_dict(train, imgFiles, pose2, pose3, mask):
 	"""Make a TensorFlow feed_dict: maps data onto Tensor placeholders."""
 	if train or not(train):
 		image_b, pose2_b, pose3_b = utils.data_prep.get_batch(imgFiles,
-		                                                      pose2, pose3, 8, mask)
+		                                                      pose2, pose3,
+		                                                      batch_size,
+		                                                      mask)
 		
 		image_b, pose2_b, pose3_b = utils.data_prep.crop_data_top_down(image_b,
 		                                                               pose2_b,
@@ -130,8 +132,10 @@ with tf.Graph().as_default():
 	
 		
 		print ("build finished, There she stands, tall and strong...")
+	
 	tf.summary.scalar('loss', loss)
 	train_step = tf.Variable(0, name='global_step', trainable=False)
+	
 	with tf.device(DEVICE):
 		train_rmsprop = rmsprop.minimize(loss, train_step)
   

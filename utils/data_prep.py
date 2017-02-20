@@ -12,7 +12,7 @@ def get_list_all_training_frames(list_of_mat):
 	pose3 = np.empty((0,14,3))
 	files = np.empty((0))
 	for mFile in list_of_mat:
-		print(mFile)
+		#print(mFile)
 		mat = scipy.io.loadmat(mFile)
 		pose2 = np.concatenate((pose2,mat['poses2']),axis=0)
 		pose3 = np.concatenate((pose3, mat['poses3']), axis=0)
