@@ -46,8 +46,8 @@ volume_res = 64
 num_joints = 14
 #The Great Parameter of Steps
 #Choose it wisely
-#steps = [1, 2, 4, 64]
-steps = [1,1]
+steps = [1, 2, 4, 64]
+#steps = [1,1]
 total_dim = np.sum(np.array(steps))
 summery_path = './tensor_record/'
 # Read all the mat files and merge the training data
