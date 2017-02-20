@@ -41,7 +41,7 @@ for ind, folder in enumerate(onlyFolders):
 		break
 
 # Parameters
-batch_size = 64
+batch_size = 8
 volume_res = 64
 num_joints = 14
 #The Great Parameter of Steps
@@ -95,12 +95,12 @@ def feed_dict(train, imgFiles, pose2, pose3, mask):
 		# print(np.shape(batch_output))
 		# print(np.shape(batch_output[0,:,:,0,:]))
 		
-		# fig = plt.figure()
-		# a=fig.add_subplot(1,2,1)
-		# plt.imshow(np.sum(batch_output[0,:,:,0,:],axis=2))
-		# a=fig.add_subplot(1,2,2)
-		# plt.imshow(image[0])
-		# plt.show()
+		#fig = plt.figure()
+		#a=fig.add_subplot(1,2,1)
+		#plt.imshow(np.sum(batch_output[0,:,:,0,:],axis=2))
+		#a=fig.add_subplot(1,2,2)
+		#plt.imshow(image[0])
+		#plt.show()
 		
 		batch_output = np.reshape(batch_output, (batch_size, volume_res, volume_res,
 		                                         total_dim * num_joints))
@@ -125,11 +125,11 @@ with tf.Graph().as_default():
 	y = tf.placeholder(tf.float32, [None, 64,
                                   64, num_joints*total_dim])
 	
-	get_out_img = utils.add_summary.vox2img(y, steps)
+	#get_out_img = utils.add_summary.vox2img(y, steps)
 	
 	# adding Label Summery
-	utils.add_summary.variable_summaries(y)
-	utils.add_summary.image_summaries(get_out_img,'label')
+	utils.add_summary.variable_summaries(y,'label')
+	#utils.add_summary.image_summaries(get_out_img,'label')
 	
 	# Calling external stacked_hourglass Function
 	#ToDo : Change the hourglass implementation and make it more coustomizable
@@ -139,13 +139,13 @@ with tf.Graph().as_default():
 	tf.summary.scalar('loss', loss)
 	
 	#Defining optimizer over loss
-	get_out_img = utils.add_summary.vox2img(output, steps)
+	#get_out_img = utils.add_summary.vox2img(output, steps)
 	
 	# adding Label Summery
-	utils.add_summary.variable_summaries(output)
-	utils.add_summary.image_summaries(get_out_img, 'pred')
+	utils.add_summary.variable_summaries(output,'pred')
+	#utils.add_summary.image_summaries(get_out_img, 'pred')
 	
-	rmsprop = tf.train.RMSPropOptimizer(2.5e-2)
+	rmsprop = tf.train.RMSPropOptimizer(2.5e-3)
 	#Printing Loss
 
 	
@@ -153,66 +153,69 @@ with tf.Graph().as_default():
 	
 	train_step = tf.Variable(0, name='global_step', trainable=False)
 	train_rmsprop = rmsprop.minimize(loss, train_step)
-  
+
 	# Initializing all the variable in TF
 	# Noting that the function depends on the version of the TF
 	
 	config = tf.ConfigProto()
 	config.gpu_options.allow_growth = True
-	
+
+	saver = tf.train.Saver()
+
 	with tf.Session(config=config) as sess:
 		merged = tf.summary.merge_all()
-		saver = tf.train.Saver()
+
 		# All the variable initialiezed in MoFoking RunTime
 		#Confusing the world gets when yoda asks initializer operator before
-			
-		
+
+
 		train_writer = tf.summary.FileWriter( summery_path + '/train', \
-		               sess.graph)
+									 sess.graph)
 		test_writer = tf.summary.FileWriter(summery_path + '/test')
 
 
 
 		if os.path.isfile(summery_path+"/tmp/model.ckpt"):
-			saver.restore(sess, summery_path+"/tmp/model.ckpt")
-			print("Model restored.")
+				saver.restore(sess, summery_path+"/tmp/model.ckpt")
+				print("Model restored.")
 		else:
-			tf.global_variables_initializer().run()
-			print('model Initialized...')
+				tf.global_variables_initializer().run()
+				print('model Initialized...')
 
 		writer = tf.summary.FileWriter(summery_path,
-		                               graph=tf.get_default_graph())
-		
+																	 graph=tf.get_default_graph())
+
 		print ("Let the Training Begin...")
 
 		# Train the model, and also write summaries.
-	  # Every 10th step, measure test-set accuracy, and write test summaries
-	  # All other steps, run train_step on training data, & add training summaries
+		# Every 10th step, measure test-set accuracy, and write test summaries
+		# All other steps, run train_step on training data, & add training summaries
 
-	
+
 		mask = np.random.permutation(np.shape(imgFiles)[0])
-	
+
 		for step in range(data_size):
-			offset = (step * batch_size) % (data_size - batch_size)
-			mask_ = mask[offset:(offset + batch_size)]
-			if step % 50 == 0:  # Record summaries and test-set accuracy
-				fD = feed_dict(True, imgFiles, pose2, pose3, mask_)
-				print ( np.shape(fD[1]))
-				summary, loss_ = sess.run([merged, loss], feed_dict={_x: fD[0],
-				                                                    y:fD[1]})
-				test_writer.add_summary(summary, step)
-				print('Loss at step %s: %s' % (step, loss_))
-			else:  # Record train set summaries, and train
-				if step % 100 == 99:  # Record execution stats
-					save_path = saver.save(sess, summery_path+"/tmp/model.ckpt")
-					print('Adding Model data for ', step, 'at ', save_path)
-				if step % 1000 == 999:  # Record execution stats
-					save_path = saver.save(sess, model_path + '/model_%05d' % step +'.ckpt')
-					print('Adding Model data for ', step, 'at ', save_path)
-				fD = feed_dict(True, imgFiles, pose2, pose3, mask_)
-				summary, loss_, _ = sess.run([merged, loss, train_step],
-										 feed_dict={_x: fD[0], y: fD[1]})
-				train_writer.add_summary(summary, step)
-				print("Grinding... Loss = " + str(loss_))
-			train_writer.close()
-			test_writer.close()
+				offset = (step * batch_size) % (data_size - batch_size)
+				mask_ = mask[offset:(offset + batch_size)]
+				#mask_ = mask[0:batch_size]
+				if step % 50 == 0:  # Record summaries and test-set accuracy
+						fD = feed_dict(True, imgFiles, pose2, pose3, mask_)
+						print ( np.shape(fD[1]))
+						summary, loss_ = sess.run([merged, loss], feed_dict={_x: fD[0],
+																																y:fD[1]})
+						test_writer.add_summary(summary, step)
+						print('Loss at step %s: %s' % (step, loss_))
+				else:  # Record train set summaries, and train
+						if step % 100 == 99:  # Record execution stats
+								save_path = saver.save(sess, summery_path+"/tmp/model.ckpt")
+								print('Adding Model data for ', step, 'at ', save_path)
+						if step % 1000 == 999:  # Record execution stats
+								save_path = saver.save(sess, model_path + '/model_%05d' % step +'.ckpt')
+								print('Adding Model data for ', step, 'at ', save_path)
+						fD = feed_dict(True, imgFiles, pose2, pose3, mask_)
+						summary, loss_, _ = sess.run([merged, loss, train_rmsprop],
+																		 feed_dict={_x: fD[0], y: fD[1]})
+						train_writer.add_summary(summary, step)
+						print("Grinding... Loss = " + str(loss_))
+		train_writer.close()
+		test_writer.close()
