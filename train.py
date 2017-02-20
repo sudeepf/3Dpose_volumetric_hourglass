@@ -171,6 +171,7 @@ with tf.Graph().as_default():
 		# Train the model, and also write summaries.
 	  # Every 10th step, measure test-set accuracy, and write test summaries
 	  # All other steps, run train_step on training data, & add training summaries
+
 	
 		mask = np.random.permutation(np.shape(imgFiles)[0])
 	
