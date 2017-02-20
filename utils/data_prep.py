@@ -33,7 +33,8 @@ def get_batch(imgFiles, pose2, pose3, num, mask):
 	pose3_ = pose3[mask,:,:]
 	data = []
 	for name in imgFiles_:
-		im = misc.imread(name[1:])
+		#print(name)
+		im = misc.imread(name[:])
 		data.append(im)
 	return np.array(data), pose2_, pose3_
 
@@ -44,6 +45,7 @@ def crop_data_top_down(images, pose2, pose3, Cam_C):
 	pose3_ = []
 	for ii in xrange(num_data_points):
 		im = images[ii]
+		imSize = min(np.shape(im)[1], np.shape(im)[0])
 		p2 = pose2[ii]# + Cam_C
 		p3 = pose3[ii]
 		#p3[:,0:2] = p3[:,0:2] + Cam_C
@@ -54,7 +56,7 @@ def crop_data_top_down(images, pose2, pose3, Cam_C):
 		midP = np.mean(p2,axis=0)
 		horizSkw  = np.random.uniform(0.3, 0.7)
 		verSkw = np.random.uniform(0.3, 0.7)
-		incSiz = np.random.uniform(70,100)
+		incSiz = np.random.uniform(60,80)
 		hW /= 2
 		hW += incSiz
 		skw = [verSkw,horizSkw]
@@ -62,6 +64,10 @@ def crop_data_top_down(images, pose2, pose3, Cam_C):
 		min_ = min_.astype(np.int)
 		hW *= 2
 		hW = hW.astype(np.int)
+		min_[0] = max(min_[0],0)
+		min_[1] = max(min_[1],0)
+		max_[0] = min(max_[0],imSize)
+		max_[1] = min(max_[1],imSize)
 		im_ = im[min_[1]:(min_[1]+hW),min_[0]:(min_[0]+hW)]
 		p2 -= min_
 		p3[:,:2] -= min_
