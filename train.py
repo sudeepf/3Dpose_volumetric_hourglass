@@ -17,7 +17,9 @@ import matplotlib.pyplot as plt
 #Path to the Dataset or the subject folders
 
 data_path = '/home/capstone/datasets/Human3.6M/Subjects/'
-model_path = './Reference/pose-hg-train-master/src/models'
+#model_path = './Reference/pose-hg-train-master/src/models'
+model_path ='./models/'
+
 #Camera Params
 Cam_C = [512.53, 515.49]
 Cam_F = [1143, 1146]
@@ -143,6 +145,7 @@ with tf.Graph().as_default():
 	
 	with tf.Session() as sess:
 		merged = tf.summary.merge_all()
+		saver = tf.train.Saver()
 		with tf.device(DEVICE):
 		# All the variable initialiezed in MoFoking RunTime
 		#Confusing the world gets when yoda asks initializer operator before
@@ -151,10 +154,15 @@ with tf.Graph().as_default():
 			train_writer = tf.summary.FileWriter( summery_path + '/train', \
 			               sess.graph)
 			test_writer = tf.summary.FileWriter(summery_path + '/test')
-			
-			tf.global_variables_initializer().run()
-			
-			# Now standard TF session and training loops resides inside this fu*ker
+
+
+
+			if os.path.isfile(summery_path+"/tmp/model.ckpt"):
+				saver.restore(sess, summery_path+"/tmp/model.ckpt")
+				print("Model restored.")
+			else:
+				tf.global_variables_initializer().run()
+
 			writer = tf.summary.FileWriter(summery_path,
 			                               graph=tf.get_default_graph())
 			
@@ -169,7 +177,7 @@ with tf.Graph().as_default():
 			for step in range(data_size):
 				offset = (step * batch_size) % (data_size - batch_size)
 				mask_ = mask[offset:(offset + batch_size)]
-				if step % 10 == 0:  # Record summaries and test-set accuracy
+				if step % 50 == 0:  # Record summaries and test-set accuracy
 					fD = feed_dict(True, imgFiles, pose2, pose3, mask_)
 					print ( np.shape(fD[1]))
 					summary, loss_ = sess.run([merged, loss], feed_dict={_x: fD[0],
@@ -178,21 +186,15 @@ with tf.Graph().as_default():
 					print('Loss at step %s: %s' % (step, loss_))
 				else:  # Record train set summaries, and train
 					if step % 100 == 99:  # Record execution stats
-						run_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
-						run_metadata = tf.RunMetadata()
-						fD = feed_dict(True, imgFiles, pose2, pose3, mask_)
-						summary, _ = sess.run([merged, train_step], feed_dict={_x: fD[0], \
-						                        y: fD[1]}, options=run_options,
-			                              run_metadata=run_metadata)
-							
-						train_writer.add_run_metadata(run_metadata, 'step%03d' % step)
-						train_writer.add_summary(summary, step)
-						print('Adding run metadata for', step)
-					else:  # Record a summary
-						fD = feed_dict(True, imgFiles, pose2, pose3, mask_)
-						summary, loss_, _ = sess.run([merged, loss, train_step],
-						                         feed_dict={_x: fD[0], y: fD[1]})
-						train_writer.add_summary(summary, step)
-						print("Grinding... Loss = " + str(loss_))
+						save_path = saver.save(sess, summery_path+"/tmp/model.ckpt")
+						print('Adding Model data for ', step, 'at ', save_path)
+					if step % 1000 == 999:  # Record execution stats
+						save_path = saver.save(sess, model_path + '/model_%05d' % step +'.ckpt')
+						print('Adding Model data for ', step, 'at ', save_path)
+					fD = feed_dict(True, imgFiles, pose2, pose3, mask_)
+					summary, loss_, _ = sess.run([merged, loss, train_step],
+											 feed_dict={_x: fD[0], y: fD[1]})
+					train_writer.add_summary(summary, step)
+					print("Grinding... Loss = " + str(loss_))
 			train_writer.close()
 			test_writer.close()
