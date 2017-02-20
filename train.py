@@ -9,6 +9,7 @@ import numpy as np
 from scipy import misc
 import utils.data_prep
 import utils.add_summary
+import utils.train_utils
 
 import sys
 import numpy as np
@@ -30,20 +31,37 @@ Cam_F = [1143, 1146]
 onlyFolders = [f for f in listdir(data_path) if isfile(join(data_path, f))!=1]
 onlyFolders.sort()
 
+#Train Folder and Test Folder
+onlyFolders_train = onlyFolders[:-1]
+print('Train Dataset: -> ',onlyFolders_train)
+onlyFolders_test = onlyFolders[-1]
+print('Test Dataset: -> ',onlyFolders_test)
+
 #list all the matfiles
-mFiles = []
-for ind, folder in enumerate(onlyFolders):
+#make one for test and one for train
+mFiles_train = []
+for ind, folder in enumerate(onlyFolders_train):
 	mat_folder_path = join(join(data_path,folder),'mats')
 	mFiles_ = [join(join(join(data_path,folder),'mats'), f) for f in listdir(
 		mat_folder_path) if f.split('.')[-1] == 'mat']
-	mFiles += mFiles_
-	if ind==1:
-		break
+	mFiles_train += mFiles_
+print('Total Train Actions x Subjects x Acts -> ', len(mFiles_train))
+
+mFiles_test = []
+for ind, folder in enumerate(onlyFolders_train):
+	mat_folder_path = join(join(data_path,folder),'mats')
+	mFiles_ = [join(join(join(data_path,folder),'mats'), f) for f in listdir(
+		mat_folder_path) if f.split('.')[-1] == 'mat']
+	mFiles_test += mFiles_
+print('Total Train Actions x Subjects x Acts -> ', len(mFiles_test))
 
 # Parameters
 batch_size = 8
 volume_res = 64
 num_joints = 14
+mul_factor = 500
+sigma = 1
+image_res = 256
 #The Great Parameter of Steps
 #Choose it wisely
 steps = [1, 2, 4, 64]
@@ -52,20 +70,25 @@ total_dim = np.sum(np.array(steps))
 summery_path = './tensor_record/'
 # Read all the mat files and merge the training data
 
-imgFiles, pose2, pose3 = utils.data_prep.get_list_all_training_frames(mFiles)
+imgFiles, pose2, pose3, scale = utils.data_prep.get_list_all_training_frames(
+	mFiles_train)
+
+imgFiles_test, pose2_test, pose3_test, scale_test = \
+	utils.data_prep.get_list_all_training_frames(
+	mFiles_test)
+
 
 data_size = np.shape(imgFiles)[0]
 
-def feed_dict(train, imgFiles, pose2, pose3, mask):
+def feed_dict(train, imgFiles, pose2, pose3):
 	"""Make a TensorFlow feed_dict: maps data onto Tensor placeholders."""
 	if train or not(train):
 		image_b, pose2_b, pose3_b = utils.data_prep.get_batch(imgFiles,
-		                                                      pose2, pose3, batch_size, mask)
+		                                                      pose2, pose3)
 		
 		image_b, pose2_b, pose3_b = utils.data_prep.crop_data_top_down(image_b,
 		                                                               pose2_b,
-		                                                               pose3_b,
-		                                                               Cam_C)
+		                                                               pose3_b)
 		
 		# Visualization of data to check if all went right
 		# utils.data_prep.data_vis(image_b, pose2_b, pose3_b, Cam_C, 0)
@@ -73,8 +96,11 @@ def feed_dict(train, imgFiles, pose2, pose3, mask):
 		
 		batch_data, image, pose2, pose3 = utils.data_prep.volumize_gt(image_b,
 		                                                              pose2_b,
-		                                                              pose3_b, 64,
-		                                                              256, 2)
+		                                                              pose3_b,
+		                                                              volume_res,
+		                                                              image_res,
+		                                                              sigma,
+		                                                              mul_factor)
 		# print(np.shape(batch_data))
 		# Batch - Joints - X - Y - Z
 		batch_data = np.swapaxes(batch_data, 1, 4)  # swap Z - Joint
@@ -197,12 +223,16 @@ with tf.Graph().as_default():
 		for step in range(data_size):
 				offset = (step * batch_size) % (data_size - batch_size)
 				mask_ = mask[offset:(offset + batch_size)]
+				gt_ = pose3[mask_]
+				fD = feed_dict(True, imgFiles[mask_], pose2[mask_], pose3[mask_])
+				err = utils.train_utils.compute_precision(fD[1],gt_,steps,scale,
+				                                          mul_factor, num_joints)
 				#mask_ = mask[0:batch_size]
-				if step % 50 == 0:  # Record summaries and test-set accuracy
-						fD = feed_dict(True, imgFiles, pose2, pose3, mask_)
-						print ( np.shape(fD[1]))
-						summary, loss_ = sess.run([merged, loss], feed_dict={_x: fD[0],
-																																y:fD[1]})
+				if step % 500 == 499:  # Record summaries and test-set accuracy
+						fD = feed_dict(True, imgFiles[mask_], pose2[mask_], pose3[mask_])
+						summary, loss_, out_test = sess.run([merged, loss, output],
+						                               feed_dict={_x: fD[0], y:fD[1]})
+						
 						test_writer.add_summary(summary, step)
 						print('Loss at step %s: %s' % (step, loss_))
 				else:  # Record train set summaries, and train
@@ -212,7 +242,7 @@ with tf.Graph().as_default():
 						if step % 1000 == 999:  # Record execution stats
 								save_path = saver.save(sess, model_path + '/model_%05d' % step +'.ckpt')
 								print('Adding Model data for ', step, 'at ', save_path)
-						fD = feed_dict(True, imgFiles, pose2, pose3, mask_)
+						fD = feed_dict(True, imgFiles[mask_], pose2[mask_], pose3[mask_])
 						summary, loss_, _ = sess.run([merged, loss, train_rmsprop],
 																		 feed_dict={_x: fD[0], y: fD[1]})
 						train_writer.add_summary(summary, step)

@@ -9,6 +9,7 @@ from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 
 def get_list_all_training_frames(list_of_mat):
 	pose2 = np.empty((0,14,2))
+	scale = np.empty((0, 14, 2))
 	pose3 = np.empty((0,14,3))
 	files = np.empty((0))
 	for mFile in list_of_mat:
@@ -17,7 +18,9 @@ def get_list_all_training_frames(list_of_mat):
 		pose2 = np.concatenate((pose2,mat['poses2']),axis=0)
 		pose3 = np.concatenate((pose3, mat['poses3']), axis=0)
 		files = np.concatenate((files, mat['imgs']), axis=0)
-	return files, pose2, pose3
+		scale = np.concatenate((scale, mat['poses3']), axis=0)
+	
+	return files, pose2, pose3, scale
 
 def shuffle_data(imgFiles, pose2, pose3):
 	mask = np.random.permutation(np.shape(imgFiles)[0])
@@ -26,19 +29,15 @@ def shuffle_data(imgFiles, pose2, pose3):
 	pose3_ = pose3[:num, :, :]
 	return imgFiles_, pose2_, pose3_
 
-def get_batch(imgFiles, pose2, pose3, num, mask):
-	mask = mask[:num]
-	imgFiles_ = imgFiles[mask]
-	pose2_ = pose2[mask,:,:]
-	pose3_ = pose3[mask,:,:]
+def get_batch(imgFiles, pose2, pose3):
 	data = []
-	for name in imgFiles_:
+	for name in imgFiles:
 		#print(name)
 		im = misc.imread(name[:])
 		data.append(im)
-	return np.array(data), pose2_, pose3_
+	return np.array(data), pose2, pose3
 
-def crop_data_top_down(images, pose2, pose3, Cam_C):
+def crop_data_top_down(images, pose2, pose3):
 	num_data_points = np.shape(images)[0]
 	images_ = []
 	pose2_ = []
@@ -66,9 +65,9 @@ def crop_data_top_down(images, pose2, pose3, Cam_C):
 		hW = hW.astype(np.int)
 		min_[0] = max(min_[0],0)
 		min_[1] = max(min_[1],0)
-		max_[0] = min(max_[0],imSize)
-		max_[1] = min(max_[1],imSize)
-		im_ = im[min_[1]:(min_[1]+hW),min_[0]:(min_[0]+hW)]
+		max_[0] = min((min_[0]+hW),imSize)
+		max_[1] = min((min_[1]+hW),imSize)
+		im_ = im[min_[1]:max_[1],min_[0]:max_[1]]
 		p2 -= min_
 		p3[:,:2] -= min_
 		images_.append(im_)
@@ -115,7 +114,7 @@ def plot_3d(image, threshold=0.5):
 
 
 def volumize_gt(image_b, pose2_b, pose3_b, resize_factor, im_resize_factor, \
-                                                        sigma):
+                                                        sigma, mul_factor):
 	num_of_data = np.shape(image_b)[0]
 	batch_data = np.empty((0,14,resize_factor,resize_factor,resize_factor))
 	pose2 = []
@@ -130,7 +129,7 @@ def volumize_gt(image_b, pose2_b, pose3_b, resize_factor, im_resize_factor, \
 		p3_ = pose3_b[ii]
 		p3_[:,0:2] = p3_[:,0:2] / size_scale_
 		p3_[:,2] = p3_[:,2] / np.mean(size_scale_)
-		p3_[:, 2] *= 500
+		p3_[:, 2] *= mul_factor
 		p3_[:,2] += resize_factor/2
 		
 		
@@ -141,9 +140,9 @@ def volumize_gt(image_b, pose2_b, pose3_b, resize_factor, im_resize_factor, \
 		#vol_joint_ = np.zeros((64,64,64))
 		for jj in xrange(14):
 			for kk in xrange(resize_factor):
-				vec_x[0,kk] = gaussian(kk, p3_[jj,0],1)
-				vec_y[0,kk] = gaussian(kk, p3_[jj, 1], 1)
-				vec_z[0,kk] = gaussian(kk, p3_[jj, 2], 1)
+				vec_x[0,kk] = gaussian(kk, p3_[jj,0], sigma)
+				vec_y[0,kk] = gaussian(kk, p3_[jj, 1], sigma)
+				vec_z[0,kk] = gaussian(kk, p3_[jj, 2], sigma)
 			bub = np.expand_dims( vec_y.transpose().dot(vec_x),axis = 0)
 			vol_joint = np.tensordot(bub, vec_z.transpose(), axes=([0],[1]))
 			vol_joint = np.expand_dims(vol_joint,axis=0)
