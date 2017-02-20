@@ -8,6 +8,8 @@ from os.path import isfile, join
 import numpy as np
 from scipy import misc
 import utils.data_prep
+import utils.add_summary
+
 import sys
 import numpy as np
 import time
@@ -122,18 +124,33 @@ with tf.Graph().as_default():
 	_x = tf.placeholder(tf.float32, [None, 256, 256, 3])
 	y = tf.placeholder(tf.float32, [None, 64,
                                   64, num_joints*total_dim])
+	
+	get_out_img = utils.add_summary.vox2img(y, steps)
+	
+	# adding Label Summery
+	utils.add_summary.variable_summaries(y)
+	utils.add_summary.image_summaries(get_out_img,'label')
+	
 	# Calling external stacked_hourglass Function
 	#ToDo : Change the hourglass implementation and make it more coustomizable
 	output = hg.stacked_hourglass(steps,'stacked_hourglass')(_x)
 	#Defining Loss with root mean square error
 	loss = tf.reduce_mean(tf.square(output - y))
+	tf.summary.scalar('loss', loss)
+	
 	#Defining optimizer over loss
+	get_out_img = utils.add_summary.vox2img(output, steps)
+	
+	# adding Label Summery
+	utils.add_summary.variable_summaries(output)
+	utils.add_summary.image_summaries(get_out_img, 'pred')
+	
 	rmsprop = tf.train.RMSPropOptimizer(2.5e-2)
 	#Printing Loss
 
 	
 	print ("build finished, There it stands, tall and strong...")
-	tf.summary.scalar('loss', loss)
+	
 	train_step = tf.Variable(0, name='global_step', trainable=False)
 	train_rmsprop = rmsprop.minimize(loss, train_step)
   
