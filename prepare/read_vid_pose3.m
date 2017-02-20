@@ -32,6 +32,8 @@ for iok=1:2:length(subjects)
         imgs = [];
         poses2 = [];
         poses3 = [];
+        scales = [];
+        camC = [];
         matName = [matPath,'/',fName,'.mat'];
         %% Looping over all the images and pose files 
         for j = 1:length(p3D)
@@ -86,8 +88,10 @@ for iok=1:2:length(subjects)
             pose3(:,3) = pose3(:,3) - repmat(m3_root(1,3),14,1);
             pose3(:,1:2) = pose3(:,1:2) + repmat(midP,14,1);
             poses3(j,:,:) = pose3;
+            scales(j,:,:) = ProjScale;
+            camC(j,:) = midP; 
         end
-        save(matName,'imgs','poses2','poses3')
+        save(matName,'imgs','poses2','poses3', 'scales', 'camC')
         disp(['saved',matName])
     end
 end
