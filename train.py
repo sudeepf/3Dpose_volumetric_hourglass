@@ -161,6 +161,7 @@ with tf.Graph().as_default():
 			print("Model restored.")
 		else:
 			tf.global_variables_initializer().run()
+			print('model Initialized...')
 
 		writer = tf.summary.FileWriter(summery_path,
 		                               graph=tf.get_default_graph())
