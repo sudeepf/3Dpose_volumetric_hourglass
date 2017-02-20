@@ -1,6 +1,6 @@
 %% Readin Videos and Extract frames to a folder
 
-subjects = ['S1', 'S5', 'S6', 'S7', 'S8', 'S9'];
+subjects = ['S1', 'S5' ,'S6', 'S7', 'S8', 'S9', 'S11'];
 
 for ioo=1:2:length(subjects)
     subject = subjects(ioo:ioo+1);
@@ -21,8 +21,8 @@ for ioo=1:2:length(subjects)
         disp(strjoin(['mkdir ',vPath,ll],''))
         system(strjoin(['mkdir ',vPath,ll],''))
         ll = cell2mat(ll)
-        lol = [vPath,ll,'/frame%4d.jpg']
-        disp(['ffmpeg  -i ', [vPath,fname],' -r 100.0 ',  lol])
-        system(['ffmpeg  -i ', [vPath,fname],' -r 100.0 ',  lol])
+        lol = [vPath,ll,'/frame%6d.jpg']
+        disp(['ffmpeg  -i ', [vPath,fname],'  ',  lol])
+        system(['ffmpeg  -i ', [vPath,fname],'  ',  lol])
     end
 end
