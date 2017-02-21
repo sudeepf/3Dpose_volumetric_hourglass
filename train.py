@@ -198,7 +198,7 @@ with tf.Graph().as_default():
 		merged = tf.summary.merge_all()
 
 		# All the variable initialiezed in MoFoking RunTime
-		#Confusing the world gets when yoda asks initializer operator before
+		# Confusing the world gets when yoda asks initializer operator before
 
 
 		train_writer = tf.summary.FileWriter( summery_path + '/train', \
