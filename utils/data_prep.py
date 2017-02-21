@@ -18,9 +18,8 @@ def get_list_all_training_frames(list_of_mat):
 		pose2 = np.concatenate((pose2,mat['poses2']),axis=0)
 		pose3 = np.concatenate((pose3, mat['poses3']), axis=0)
 		files = np.concatenate((files, mat['imgs']), axis=0)
-		scale = np.concatenate((scale, mat['scales']), axis=0)
-	
-	return files, pose2, pose3, scale
+
+	return files, pose2, pose3
 
 def shuffle_data(imgFiles, pose2, pose3):
 	mask = np.random.permutation(np.shape(imgFiles)[0])
@@ -33,7 +32,7 @@ def get_batch(imgFiles, pose2, pose3):
 	data = []
 	for name in imgFiles:
 		#print(name)
-		im = misc.imread(name[1:])
+		im = misc.imread(name[:])
 		data.append(im)
 	return np.array(data), pose2, pose3
 
@@ -62,7 +61,7 @@ def crop_data_top_down(images, pose2, pose3):
 		skw = [verSkw,horizSkw]
 		min_ = midP - skw * np.array(hW)
 		
-		min_ = min_.astype(np.int)
+
 
 		
 		hW = hW.astype(np.int)
@@ -79,7 +78,8 @@ def crop_data_top_down(images, pose2, pose3):
 		#plt.scatter(max_[0], max_[1], c='g')
 		
 		#plt.show()
-		
+		min_ = min_.astype(np.int)
+		max_ = max_.astype(np.int)
 		im_ = im[min_[1]:max_[1],min_[0]:max_[0]]
 		p2 -= min_
 		p3[:,:2] -= min_

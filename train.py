@@ -19,7 +19,7 @@ import matplotlib.pyplot as plt
 
 #Path to the Dataset or the subject folders
 
-data_path = './Dataset/'
+data_path = '/home/capstone/datasets/Human3.6M/Subjects/'
 #model_path = './Reference/pose-hg-train-master/src/models'
 model_path ='./models/'
 
@@ -32,9 +32,9 @@ onlyFolders = [f for f in listdir(data_path) if isfile(join(data_path, f))!=1]
 onlyFolders.sort()
 
 #Train Folder and Test Folder
-onlyFolders_train = onlyFolders[:]
+onlyFolders_train = onlyFolders[:-1]
 print('Train Dataset: -> ',onlyFolders_train)
-onlyFolders_test = onlyFolders[:]
+onlyFolders_test = onlyFolders[-1:]
 print('Test Dataset: -> ',onlyFolders_test)
 
 #list all the matfiles
@@ -48,7 +48,7 @@ for ind, folder in enumerate(onlyFolders_train):
 print('Total Train Actions x Subjects x Acts -> ', len(mFiles_train))
 
 mFiles_test = []
-for ind, folder in enumerate(onlyFolders_train):
+for ind, folder in enumerate(onlyFolders_test):
 	mat_folder_path = join(join(data_path,folder),'mats')
 	mFiles_ = [join(join(join(data_path,folder),'mats'), f) for f in listdir(
 		mat_folder_path) if f.split('.')[-1] == 'mat']
@@ -56,7 +56,7 @@ for ind, folder in enumerate(onlyFolders_train):
 print('Total Train Actions x Subjects x Acts -> ', len(mFiles_test))
 
 # Parameters
-batch_size = 2
+batch_size = 16
 volume_res = 64
 num_joints = 14
 mul_factor = 500
@@ -64,20 +64,20 @@ sigma = 1
 image_res = 256
 #The Great Parameter of Steps
 #Choose it wisely
-steps = [64]
+steps = [1, 64]
 #steps = [1,1]
 total_dim = np.sum(np.array(steps))
 summery_path = './tensor_record/'
 # Read all the mat files and merge the training data
 
-imgFiles, pose2, pose3, scale = utils.data_prep.get_list_all_training_frames(
+imgFiles, pose2, pose3 = utils.data_prep.get_list_all_training_frames(
 	mFiles_train)
 
-imgFiles_test, pose2_test, pose3_test, scale_test = \
+imgFiles_test, pose2_test, pose3_test = \
 	utils.data_prep.get_list_all_training_frames(
 	mFiles_test)
 
-
+print('data loaded... phhhh')
 data_size = np.shape(imgFiles)[0]
 
 def feed_dict(train, imgFiles, pose2, pose3):
@@ -176,7 +176,7 @@ with tf.Graph().as_default():
 	utils.add_summary.variable_summaries(output,'pred')
 	#utils.add_summary.image_summaries(get_out_img, 'pred')
 	
-	rmsprop = tf.train.RMSPropOptimizer(2.5e-3)
+	rmsprop = tf.train.RMSPropOptimizer(2.5e-4)
 	#Printing Loss
 	
 	#Accuracy for love of God!
@@ -237,40 +237,41 @@ with tf.Graph().as_default():
 
 
 		mask = np.random.permutation(np.shape(imgFiles)[0])
-
+		mask_test = np.random.permutation(np.shape(imgFiles_test)[0])
 		for step in range(data_size):
 				offset = (step * batch_size) % (data_size - batch_size)
 				mask_ = mask[offset:(offset + batch_size)]
 				
 				
 				#mask_ = mask[0:batch_size]
-				if step % 50 == 499:  # Record summaries and test-set accuracy
-						fD = feed_dict(True, imgFiles[mask_], pose2[mask_], pose3[mask_])
-						gt_ = pose3[mask_]
+				if False:  # Record summaries and test-set accuracy
+						mask_test_ = mask_test[0:64]
+						fD = feed_dict(True, imgFiles_test[mask_test_], pose2_test[mask_test_],  pose3_test[mask_test_])
+						gt_ = pose3_test[mask_test_]
 						
 						summary, loss_, out_test = sess.run([merged, loss, output],
 						                               feed_dict={_x: fD[0], y:fD[1]})
 						err = utils.train_utils.compute_precision(out_test, gt_, steps,
 						                                          mul_factor, num_joints)
-						summary_ = tf.Summary()
-						summary_.ParseFromString(sess.run(summary))
-						utils.add_summary.add_all_joints(err,summary_)
+						#summary_ = tf.Summary()
+						#summary_.ParseFromString(sess.run(summary))
+						#utils.add_summary.add_all_joints(err,summary_)
 						
 						test_writer.add_summary(summary, step)
 						print('Loss at step %s: %s' % (step, loss_))
 				
-				if step % 5000 == 4999:  # Record summaries and test-set accuracy
-					fD = feed_dict(True, imgFiles, pose2, pose3)
-					gt_ = pose3
+				if False: #step % 5000 == 4999:  # Record summaries and test-set accuracy
+					fD = feed_dict(True, imgFiles_test[mask_], pose2_test[mask_], pose3_test[mask_])
+					#gt_ = pose3_test[mask_]
 					
-					summary, loss_, out_test = sess.run([merged, loss, output],
-					                                    feed_dict={_x: fD[0], y: fD[1]})
+					#summary, loss_, out_test = sess.run([merged, loss, output],
+					#                                    feed_dict={_x: fD[0], y: fD[1]})
 					
-					err = utils.train_utils.compute_precision(out_test, gt_, steps,
-					                                          scale[mask_],
-					                                          mul_factor, num_joints)
-					test_writer.add_summary(summary, step)
-					print('Loss at step %s: %s' % (step, loss_))
+					#err = utils.train_utils.compute_precision(out_test, gt_, steps,
+					#                                          scale[mask_],
+					#                                          mul_factor, num_joints)
+					#test_writer.add_summary(summary, step)
+					#print('Loss at step %s: %s' % (step, loss_))
 				
 				
 		
@@ -292,10 +293,10 @@ with tf.Graph().as_default():
 					                             feed_dict={_x: fD[0], y: fD[1]})
 					err = utils.train_utils.compute_precision(out_test, gt_, steps,
 					                                          mul_factor, num_joints)
-					summary_ = tf.Summary()
-					summary_.ParseFromString(sess.run(summary))
-					utils.add_summary.add_all_joints(err,summary_)
-					train_writer.add_summary(summary_, step)
+					#summary_ = tf.Summary()
+					#summary_.ParseFromString(sess.run(summary))
+					#utils.add_summary.add_all_joints(err,summary_)
+					train_writer.add_summary(summary, step)
 					print ("Current Accuracy is" + str(np.sum(err)))
 				print("Grinding... Loss = " + str(loss_))
 		

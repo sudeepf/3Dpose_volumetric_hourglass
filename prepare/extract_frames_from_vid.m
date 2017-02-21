@@ -1,6 +1,6 @@
 %% Readin Videos and Extract frames to a folder
 
-subjects = ['S1', 'S5' ,'S6', 'S7', 'S8', 'S9', 'S11'];
+subjects = ['S1'];
 
 for ioo=1:2:length(subjects)
     subject = subjects(ioo:ioo+1);
