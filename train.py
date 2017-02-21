@@ -19,7 +19,7 @@ import matplotlib.pyplot as plt
 
 #Path to the Dataset or the subject folders
 
-data_path = '/home/capstone/datasets/Human3.6M/Subjects/'
+data_path = './Dataset/'
 #model_path = './Reference/pose-hg-train-master/src/models'
 model_path ='./models/'
 
@@ -32,9 +32,9 @@ onlyFolders = [f for f in listdir(data_path) if isfile(join(data_path, f))!=1]
 onlyFolders.sort()
 
 #Train Folder and Test Folder
-onlyFolders_train = onlyFolders[:-1]
+onlyFolders_train = onlyFolders[:]
 print('Train Dataset: -> ',onlyFolders_train)
-onlyFolders_test = onlyFolders[-1]
+onlyFolders_test = onlyFolders[:]
 print('Test Dataset: -> ',onlyFolders_test)
 
 #list all the matfiles
@@ -56,7 +56,7 @@ for ind, folder in enumerate(onlyFolders_train):
 print('Total Train Actions x Subjects x Acts -> ', len(mFiles_test))
 
 # Parameters
-batch_size = 8
+batch_size = 2
 volume_res = 64
 num_joints = 14
 mul_factor = 500
@@ -64,7 +64,7 @@ sigma = 1
 image_res = 256
 #The Great Parameter of Steps
 #Choose it wisely
-steps = [1, 2, 4, 64]
+steps = [64]
 #steps = [1,1]
 total_dim = np.sum(np.array(steps))
 summery_path = './tensor_record/'
@@ -91,7 +91,7 @@ def feed_dict(train, imgFiles, pose2, pose3):
 		                                                               pose3_b)
 		
 		# Visualization of data to check if all went right
-		# utils.data_prep.data_vis(image_b, pose2_b, pose3_b, Cam_C, 0)
+		#utils.data_prep.data_vis(image_b, pose2_b, pose3_b, Cam_C, 0)
 		
 		
 		batch_data, image, pose2, pose3 = utils.data_prep.volumize_gt(image_b,
@@ -111,16 +111,19 @@ def feed_dict(train, imgFiles, pose2, pose3):
 		# print(np.shape(batch_data))
 		
 		batch_output = utils.data_prep.prepare_output(batch_data,steps)
+		#print(np.shape(batch_output))
 		# 3D - Batch - Joints - X - Y
-		# print(np.shape(batch_output))
-		batch_output = np.rollaxis(batch_output, 3, 1)
+		batch_output = np.rollaxis(batch_output, 0, 5)
+		# Batch - J - X - Y - 3D
+		#print(np.shape(batch_output))
+		# 3D - X - Batch - J - Y
 		# Batch - Joints - X - Y - 3D
 		# print(np.shape(batch_output))
-		batch_output = np.rollaxis(batch_output, 4, 2)
+		batch_output = np.rollaxis(batch_output, 1, 5)
 		# Batch - X - Y - 3D - Joints
 		# print(np.shape(batch_output))
 		# print(np.shape(batch_output[0,:,:,0,:]))
-		
+		#print (np.shape(batch_output))
 		#fig = plt.figure()
 		#a=fig.add_subplot(1,2,1)
 		#plt.imshow(np.sum(batch_output[0,:,:,0,:],axis=2))
@@ -135,8 +138,9 @@ def feed_dict(train, imgFiles, pose2, pose3):
 		print('nothing')
 		#xs, ys = mnist.test.images, mnist.test.labels
 		#k = 1.0
-	return image, batch_output
+	return image, batch_output, pose3
 
+#TESTINGGGGG TO BE DELETED
 
 # Build Model
 with tf.Graph().as_default():
@@ -150,7 +154,8 @@ with tf.Graph().as_default():
 	_x = tf.placeholder(tf.float32, [None, 256, 256, 3])
 	y = tf.placeholder(tf.float32, [None, 64,
                                   64, num_joints*total_dim])
-	
+	gt = tf.placeholder(tf.float32, [None, num_joints,
+                                  3])
 	#get_out_img = utils.add_summary.vox2img(y, steps)
 	
 	# adding Label Summery
@@ -173,7 +178,8 @@ with tf.Graph().as_default():
 	
 	rmsprop = tf.train.RMSPropOptimizer(2.5e-3)
 	#Printing Loss
-
+	
+	#Accuracy for love of God!
 	
 	print ("build finished, There it stands, tall and strong...")
 	
@@ -198,13 +204,25 @@ with tf.Graph().as_default():
 		train_writer = tf.summary.FileWriter( summery_path + '/train', \
 									 sess.graph)
 		test_writer = tf.summary.FileWriter(summery_path + '/test')
-
-
-
-		if os.path.isfile(summery_path+"/tmp/model.ckpt"):
-				saver.restore(sess, summery_path+"/tmp/model.ckpt")
-				print("Model restored.")
+		
+		ckpt = tf.train.get_checkpoint_state(model_path)
+		if ckpt and ckpt.model_checkpoint_path:
+			if os.path.isabs(ckpt.model_checkpoint_path):
+				# Restores from checkpoint with absolute path.
+				saver.restore(sess, ckpt.model_checkpoint_path)
+			else:
+				# Restores from checkpoint with relative path.
+				saver.restore(sess, os.path.join(model_path,
+				                                 ckpt.model_checkpoint_path))
+			
+			# Assuming model_checkpoint_path looks something like:
+			#   /my-favorite-path/imagenet_train/model.ckpt-0,
+			# extract global_step from it.
+			global_step = ckpt.model_checkpoint_path.split('/')[-1].split('-')[-1]
+			print('Succesfully loaded model from %s at step=%s.' %
+			      (ckpt.model_checkpoint_path, global_step))
 		else:
+				print('No checkpoint file found')
 				tf.global_variables_initializer().run()
 				print('model Initialized...')
 
@@ -223,29 +241,63 @@ with tf.Graph().as_default():
 		for step in range(data_size):
 				offset = (step * batch_size) % (data_size - batch_size)
 				mask_ = mask[offset:(offset + batch_size)]
-				gt_ = pose3[mask_]
-				fD = feed_dict(True, imgFiles[mask_], pose2[mask_], pose3[mask_])
-				err = utils.train_utils.compute_precision(fD[1],gt_,steps,scale,
-				                                          mul_factor, num_joints)
+				
+				
 				#mask_ = mask[0:batch_size]
-				if step % 500 == 499:  # Record summaries and test-set accuracy
+				if step % 50 == 499:  # Record summaries and test-set accuracy
 						fD = feed_dict(True, imgFiles[mask_], pose2[mask_], pose3[mask_])
+						gt_ = pose3[mask_]
+						
 						summary, loss_, out_test = sess.run([merged, loss, output],
 						                               feed_dict={_x: fD[0], y:fD[1]})
+						err = utils.train_utils.compute_precision(out_test, gt_, steps,
+						                                          mul_factor, num_joints)
+						summary_ = tf.Summary()
+						summary_.ParseFromString(sess.run(summary))
+						utils.add_summary.add_all_joints(err,summary_)
 						
 						test_writer.add_summary(summary, step)
 						print('Loss at step %s: %s' % (step, loss_))
-				else:  # Record train set summaries, and train
-						if step % 100 == 99:  # Record execution stats
-								save_path = saver.save(sess, summery_path+"/tmp/model.ckpt")
-								print('Adding Model data for ', step, 'at ', save_path)
-						if step % 1000 == 999:  # Record execution stats
-								save_path = saver.save(sess, model_path + '/model_%05d' % step +'.ckpt')
-								print('Adding Model data for ', step, 'at ', save_path)
-						fD = feed_dict(True, imgFiles[mask_], pose2[mask_], pose3[mask_])
-						summary, loss_, _ = sess.run([merged, loss, train_rmsprop],
-																		 feed_dict={_x: fD[0], y: fD[1]})
-						train_writer.add_summary(summary, step)
-						print("Grinding... Loss = " + str(loss_))
+				
+				if step % 5000 == 4999:  # Record summaries and test-set accuracy
+					fD = feed_dict(True, imgFiles, pose2, pose3)
+					gt_ = pose3
+					
+					summary, loss_, out_test = sess.run([merged, loss, output],
+					                                    feed_dict={_x: fD[0], y: fD[1]})
+					
+					err = utils.train_utils.compute_precision(out_test, gt_, steps,
+					                                          scale[mask_],
+					                                          mul_factor, num_joints)
+					test_writer.add_summary(summary, step)
+					print('Loss at step %s: %s' % (step, loss_))
+				
+				
+		
+				if step % 100 == 99:  # Record execution stats
+						save_path = saver.save(sess, summery_path+"/tmp/model.ckpt")
+						print('Adding Model data for ', step, 'at ', save_path)
+				
+				if step % 1000 == 999:  # Record execution stats
+						save_path = saver.save(sess, model_path + '/model_%05d' % step +'.ckpt')
+						print('Adding Model data for ', step, 'at ', save_path)
+				
+				fD = feed_dict(True, imgFiles[mask_], pose2[mask_], pose3[mask_])
+				summary, loss_, _ = sess.run([merged, loss, train_rmsprop],
+																 feed_dict={_x: fD[0], y: fD[1]})
+				
+				if step % 10 == 1:
+					gt_ = pose3[mask_]
+					summary, loss_, out_test = sess.run([merged, loss, output],
+					                             feed_dict={_x: fD[0], y: fD[1]})
+					err = utils.train_utils.compute_precision(out_test, gt_, steps,
+					                                          mul_factor, num_joints)
+					summary_ = tf.Summary()
+					summary_.ParseFromString(sess.run(summary))
+					utils.add_summary.add_all_joints(err,summary_)
+					train_writer.add_summary(summary_, step)
+					print ("Current Accuracy is" + str(np.sum(err)))
+				print("Grinding... Loss = " + str(loss_))
+		
 		train_writer.close()
 		test_writer.close()

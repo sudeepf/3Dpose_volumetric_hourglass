@@ -18,7 +18,7 @@ def get_list_all_training_frames(list_of_mat):
 		pose2 = np.concatenate((pose2,mat['poses2']),axis=0)
 		pose3 = np.concatenate((pose3, mat['poses3']), axis=0)
 		files = np.concatenate((files, mat['imgs']), axis=0)
-		scale = np.concatenate((scale, mat['poses3']), axis=0)
+		scale = np.concatenate((scale, mat['scales']), axis=0)
 	
 	return files, pose2, pose3, scale
 
@@ -33,7 +33,7 @@ def get_batch(imgFiles, pose2, pose3):
 	data = []
 	for name in imgFiles:
 		#print(name)
-		im = misc.imread(name[:])
+		im = misc.imread(name[1:])
 		data.append(im)
 	return np.array(data), pose2, pose3
 
@@ -53,23 +53,37 @@ def crop_data_top_down(images, pose2, pose3):
 		max_ = np.max(p2,axis=0)
 		hW = np.max(max_ - min_)
 		midP = np.mean(p2,axis=0)
-		horizSkw  = np.random.uniform(0.3, 0.7)
-		verSkw = np.random.uniform(0.3, 0.7)
+		
+		verSkw  = np.random.uniform(0.3, 0.7)
+		horizSkw = np.random.uniform(0.35, 0.5)
 		incSiz = np.random.uniform(60,80)
-		hW /= 2
+		#hW /= 2
 		hW += incSiz
 		skw = [verSkw,horizSkw]
 		min_ = midP - skw * np.array(hW)
+		
 		min_ = min_.astype(np.int)
-		hW *= 2
+
+		
 		hW = hW.astype(np.int)
-		min_[0] = max(min_[0],0)
-		min_[1] = max(min_[1],0)
-		max_[0] = min((min_[0]+hW),imSize)
-		max_[1] = min((min_[1]+hW),imSize)
-		im_ = im[min_[1]:max_[1],min_[0]:max_[1]]
+		min_[1] = max(min_[1], 0)
+		min_[0] = max(min_[0], 0)
+		max_[1] = min((min_[1] + hW), imSize)
+		max_[0] = min((min_[0] + hW), imSize)
+		
+		# Debugging Stuff
+		#implot = plt.imshow(im)
+		#plt.scatter(x=p2[:, 0], y=p2[:, 1], c='r')
+		#plt.scatter(midP[0], midP[1], c='b')
+		#plt.scatter(min_[0], min_[1], c='b')
+		#plt.scatter(max_[0], max_[1], c='g')
+		
+		#plt.show()
+		
+		im_ = im[min_[1]:max_[1],min_[0]:max_[0]]
 		p2 -= min_
 		p3[:,:2] -= min_
+		
 		images_.append(im_)
 		pose2_.append(p2)
 		pose3_.append(p3)

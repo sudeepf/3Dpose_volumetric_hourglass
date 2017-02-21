@@ -23,3 +23,11 @@ def vox2img(vox, steps):
 	start_z = np.sum(steps[0:len(steps)-1])
 	size = steps[-1]
 	img = tf.reduce_sum(vox,[0,0,0,start_z],[1,64,64,size],2)
+	
+def add_all_joints(prec, summary, name='precision'):
+	summary_ = tf.Summary()
+	summary_.ParseFromString(sess.run(summary))
+	for j, err in enumerate(prec):
+		summary_.value.add(name+'joint_%02d' % j , err)
+	#adding total error
+	summary_.value.add(name+'total_error',np.sum(prec))

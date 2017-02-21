@@ -1,10 +1,10 @@
 % Read imagefiles and 3D pose
 
-subjects = ['S1', 'S5']%, 'S6', 'S7', 'S8', 'S9'];
+subjects = ['S1']%, 'S6', 'S7', 'S8', 'S9'];
 % Dataset Paths 
 for iok=1:2:length(subjects)
     subject = subjects(iok:iok+1);
-    path = ['/home/capstone/datasets/Human3.6M/Subjects/',subject];
+    path = ['../Dataset/',subject];
     vPath = [path,'/Videos/'];
     pPath = [path,'/Pose/D3_Positions_mono/'];
     p2Path = [path,'/Pose/D2_Positions/'];
