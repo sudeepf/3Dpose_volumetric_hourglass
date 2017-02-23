@@ -128,9 +128,10 @@ class DataHolder():
 		this function now my life becomes much simpler
 		"""
 		
-		offset = (self.train_iter * self.FLAG.batch_size) % (self.train_data_size -
-		                                                      self.FLAG.batch_size)
+		offset = min(self.train_iter * self.FLAG.batch_size) , \
+		         (self.train_data_size - self.FLAG.batch_size)
 		mask_ = self.mask_train[offset:(offset + self.FLAG.batch_size)]
+		
 		fd = self.get_dict(True, self.imgFiles[mask_], self.pose2[mask_],
 		              self.pose3[mask_])
 		

@@ -56,7 +56,7 @@ def get_summary_writer(FLAG, sess):
 def add_all(x,y,output,loss):
 	tf.summary.scalar('loss', loss)
 	variable_summaries(y, 'label')
-	variable_summaries(y, 'output')
+	variable_summaries(output, 'output')
 	#img = tf.image.convert_image_dtype(img, dtype=tf.uint8)
 	img = tf.image.resize_images(x[0:1], [32, 32])
 	image_summaries(img,'input')
