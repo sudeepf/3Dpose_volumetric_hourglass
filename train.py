@@ -111,16 +111,17 @@ def main(_):
 						y.append(fd[1])
 						gt.append(fd[2])
 					
-					feed_dict = {i: d for i, d in zip(builder._x, _x),
-					            i_:d_	for i_, d_ in zip(builder.y, y)}
+					feed_dict_x = {i:d for i, d in zip(builder._x, _x)}
+					feed_dict_y = {i:d	for i, d in zip(builder.y, y)}
+					
+					feed_dict_x.update(feed_dict_y)
+					
 					
 					if step % 10 == 1:
 						gt_ = fd[2]
-						feed_dict = {i: d for i, d in zip(builder._x, _x),
-													i_:d_ for i_, d_ in zip(builder.y, y)}
 							
 						summary, loss_, out_test = sess.run([merged, builder.loss,
-						                                     builder.output], feed_dict)
+						                                     builder.output], feed_dict_x)
 						                                    
 						err = utils.eval_utils.compute_precision(out_test, gt_,
 						                                          structure,
@@ -133,7 +134,7 @@ def main(_):
 					
 					
 					loss_, _ = sess.run([builder.loss, builder.train_rmsprop],
-					                             feed_dict)
+					                             feed_dict_x)
 					
 					print("Grinding... Loss = " + str(loss_))
 			
