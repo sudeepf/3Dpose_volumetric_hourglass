@@ -21,18 +21,12 @@ def get_list_all_training_frames(list_of_mat):
 
 	return files, pose2, pose3
 
-def shuffle_data(imgFiles, pose2, pose3):
-	mask = np.random.permutation(np.shape(imgFiles)[0])
-	imgFiles_ = imgFiles[mask]
-	pose2_ = pose2[:num, :, :]
-	pose3_ = pose3[:num, :, :]
-	return imgFiles_, pose2_, pose3_
 
 def get_batch(imgFiles, pose2, pose3):
 	data = []
 	for name in imgFiles:
 		#print(name)
-		im = misc.imread(name[:])
+		im = misc.imread(name[1:])
 		data.append(im)
 	return np.array(data), pose2, pose3
 

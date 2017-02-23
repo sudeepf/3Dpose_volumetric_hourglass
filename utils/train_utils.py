@@ -1,79 +1,136 @@
+from __future__ import print_function
+
+#import torch
 import tensorflow as tf
+from os import listdir
+import os
+from os.path import isfile, join
 import numpy as np
-import add_summary as summ
-from numpy import unravel_index
+from scipy import misc
+
+
+import sys
+import numpy as np
+import time
+import hourglass_TF.src.stacked_hourglass as hg
 import matplotlib.pyplot as plt
 
-def compute_precision(prediction, gt, steps, mul_factor, num_joints):
-	"""" Given prediction stack, GT coordinates and scale between two """
-	predictions_cord  = get_coordinate(prediction,steps,num_joints)
-	joint_wise_error = np.zeros((num_joints))
-	for ii, pred_cord in enumerate(predictions_cord):
-		gt_ = gt[ii]
-		
-		
-		pred_cord = pred_cord.astype(float)
-		# Get Root Joints ie Hips
-		RJ1_pred = pred_cord[8,:]
-		RJ2_pred = pred_cord[11,:]
-		RJ1_gt = gt_[8,:]
-		RJ2_gt = gt_[11,:]
+#Get all the custom helper util headers
+import utils.data_prep
+import utils.add_summary
+import data_prep
+import utils.get_flags
 
+class DataHolder():
+	def __init__(self, FLAG):
+		self.FLAG = FLAG
+		# get all the subjects
+		train_subjects = FLAG.data_split_string_train.split('-')
+		test_subjects = FLAG.data_split_string_test.split('-')
 		
+		# Train Folder and Test Folder
+		print('Train Dataset: -> ', train_subjects)
+		print('Test Dataset: -> ', test_subjects)
 		
-		# Get mean of pose
-		MR_gt = (RJ1_gt + RJ2_gt)/2
-		MR_pred = (RJ1_pred + RJ2_pred)/2
+		# list all the matfiles
+		# make one for test and one for train
+		self.mFiles_train = []
+		for ind, folder in enumerate(train_subjects):
+			mat_folder_path = join(join(FLAG.dataset_dir, folder), 'mats')
+			mFiles_ = [join(join(join(FLAG.dataset_dir, folder), 'mats'), f) for f in
+			           listdir(mat_folder_path) if f.split('.')[-1] == 'mat']
+			self.mFiles_train += mFiles_
+		print('Total Train Actions x Subjects x Acts -> ', len(self.mFiles_train))
 		
-		# Allign mean of pred to mean of GT
+		self.mFiles_test = []
+		for ind, folder in enumerate(test_subjects):
+			mat_folder_path = join(join(FLAG.dataset_dir, folder), 'mats')
+			mFiles_ = [join(join(join(FLAG.dataset_dir, folder), 'mats'), f) for f in
+			           listdir(mat_folder_path) if f.split('.')[-1] == 'mat']
+			self.mFiles_test += mFiles_
+		print('Total Test Actions x Subjects x Acts -> ', len(self.mFiles_test))
 		
-		pred_cord -=  MR_pred
-		gt_ -= MR_gt
+		self.read_mat_files()
 		
-		#Get Root limb length
-		RL_pred = np.linalg.norm(RJ1_pred[0:2]-RJ2_pred[0:2])
-		RL_gt = np.linalg.norm(RJ1_gt[0:2] - RJ2_gt[0:2])
+		self.train_data_size = np.shape(self.imgFiles)[0]
+		self.test_data_size = np.shape(self.imgFiles_test)[0]
 		
+		print('Total Training Data Frames are ', self.train_data_size)
+		print('Total Testing Data Frames are ', self.test_data_size)
 		
-		#Get scale from limb length
-		scale_ = RL_gt/RL_pred
+		#initializing training and testing iterations
+		self.train_iter = 0
+		self.test_iter = 0
 		
-		pred_cord[:,2] /= mul_factor
-		pred_cord[:,:] *= scale_
+		#Getting Suffled Mask
+		self.mask_train = np.random.permutation(self.train_data_size)
+		self.mask_test = np.random.permutation(self.test_data_size)
 		
-		#plt.scatter(x=pred_cord[:, 0], y=pred_cord[:, 1], c='r')
-		#plt.scatter(x=gt_[:, 0], y=gt_[:, 1], c='b')
-		#plt.show()
+	def read_mat_files(self):
+		self.imgFiles, self.pose2, self.pose3 = \
+			data_prep.get_list_all_training_frames(self.mFiles_train)
 		
-		for jj in xrange(num_joints):
-			joint_wise_error[jj] += (np.linalg.norm(pred_cord[jj]-gt_[jj]))
-	
-	
-	return joint_wise_error/np.shape(prediction)[0]
-	
-	
-	
-def get_coordinate(prediction,steps,num_joints):
-	out_shape = np.shape(prediction)
-	total_Z = sum(steps)
-	pred_ = np.reshape(prediction,(out_shape[0],out_shape[1],out_shape[2],
-	                               total_Z, num_joints))
-	#print(np.shape(pred_))
-	#plt.imshow(np.sum(pred_[0, :, :, 0, :], axis=2))
-	#plt.show()
-	pred_ = pred_[:,:,:,-1*steps[-1]:,:]
-	# Pred_ size is now Batch - X - Y - Z - Joints
-	# we need in Batch - Joint - 3(X,Y,Z)
-	pred_ = np.rollaxis(pred_,4,1)
-	pred_ = np.swapaxes(pred_,2,3)
-	out_shape = np.shape(pred_)
-	
-	cords = np.zeros((out_shape[0],out_shape[1],3))
-	#Would need to itterate over the batch size and joints unfortunately
-	for fi, frame in enumerate(pred_[:]):
-		for ji, joint in enumerate(frame[:]):
-			cords[fi,ji,:] = np.array(unravel_index(joint.argmax(), joint.shape))
-	
-	#plt.scatter(x=cords[0,:, 0], y=cords[0,:, 1], c='b')
-	#plt.show()
-	return cords
+		self.imgFiles_test, self.pose2_test, self.pose3_test = \
+			data_prep.get_list_all_training_frames(self.mFiles_test)
+		
+	def get_dict(self, train, imgFiles, pose2, pose3):
+		"""Make a TensorFlow feed_dict: maps data onto Tensor placeholders."""
+		steps = map(int, self.FLAG.structure_string.split('-'))
+		total_dim = np.sum(np.array(steps))
+		
+		if train or not (train):
+			image_b, pose2_b, pose3_b = utils.data_prep.get_batch(imgFiles,
+			                                                      pose2, pose3)
+			
+			image_b, pose2_b, pose3_b = utils.data_prep.crop_data_top_down(image_b,
+			                                                               pose2_b,
+			                                                               pose3_b)
+			
+			
+			batch_data, image, pose2, pose3 = utils.data_prep.volumize_gt(image_b,
+			                                                              pose2_b,
+			                                                              pose3_b,
+			                                                              self.FLAG.volume_res,
+			                                                              self.FLAG.image_res,
+			                                                              self.FLAG.sigma,
+			                                                              self.FLAG.mul_factor)
+			
+			# Batch - Joints - X - Y - Z
+			batch_data = np.swapaxes(batch_data, 1, 4)  # swap Z - Joint
+			# Batch - Z - X - Y - Joints
+			batch_data = np.swapaxes(batch_data, 0, 1)  # swap Joint - Depth
+			# Z- Batch - X - Y - Joints
+			
+			batch_output = utils.data_prep.prepare_output(batch_data, steps)
+			# 3D - Batch - Joints - X - Y
+			batch_output = np.rollaxis(batch_output, 0, 5)
+			# Batch - J - X - Y - 3D
+			batch_output = np.rollaxis(batch_output, 1, 5)
+			# Batch - X - Y - 3D - Joints
+			
+			# from string model struct to list model struct
+			
+			
+			batch_output = np.reshape(batch_output,
+			                          (self.FLAG.batch_size, self.FLAG.volume_res,
+			                           self.FLAG.volume_res,
+			                           total_dim * self.FLAG.num_joints))
+		
+		else:
+			print('nothing')
+		# xs, ys = mnist.test.images, mnist.test.labels
+		# k = 1.0
+		return image_b, batch_output
+
+	def get_next_train_batch(self):
+		"""
+		:return: This Function basically gives out next batch data everytime its
+		been called, as it has all the information it needs, I totally needed
+		this function now my life becomes much simpler
+		"""
+		
+		offset = (self.train_iter * self.FLAG.batch_size) % (self.train_data_size -
+		                                                      self.FLAG.batch_size)
+		mask_ = self.mask_train[offset:(offset + self.FLAG.batch_size)]
+		return self.get_dict(True, self.imgFiles[mask_], self.pose2[mask_],
+		                 self.pose3[mask_])

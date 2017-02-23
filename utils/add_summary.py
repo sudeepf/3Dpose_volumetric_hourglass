@@ -1,5 +1,8 @@
 import tensorflow as tf
 import numpy as np
+from os import listdir
+import os
+from os.path import isfile, join
 
 def variable_summaries(var, name):
 	"""Attach a lot of summaries to a Tensor  (for TensorBoard visualization)."""
@@ -31,3 +34,20 @@ def add_all_joints(prec, summary, name='precision'):
 		summary_.value.add(name+'joint_%02d' % j , err)
 	#adding total error
 	summary_.value.add(name+'total_error',np.sum(prec))
+	
+def get_summary_writer(FLAG, sess):
+	onlyFolders = [f for f in listdir(FLAG.eval_dir+'/summaries/') if
+	               isfile(join(FLAG.eval_dir+'/summaries/', f)) != 1]
+	onlyFolders.sort()
+	
+	if(len(onlyFolders) == 0):
+		return tf.summary.FileWriter(FLAG.eval_dir + '/summaries/' + '00' +
+		                             '/train/', sess.graph), \
+		       tf.summary.FileWriter(FLAG.eval_dir + '/summaries/' + '00' +
+		                             '/test/', sess.graph)
+	else:
+		model_name = '/%02d' % (int(onlyFolders[-1])+1)
+		return tf.summary.FileWriter(FLAG.eval_dir + '/summaries/' + model_name +
+		                             '/train/', sess.graph), \
+		       tf.summary.FileWriter(FLAG.eval_dir + '/summaries/' + model_name +
+		                             '/test/', sess.graph)
