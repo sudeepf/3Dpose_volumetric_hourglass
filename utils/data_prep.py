@@ -12,7 +12,7 @@ def get_list_all_training_frames(list_of_mat):
 	pose3_ = []
 	pose2_ = []
 	files_ = []
-
+	
 	for ind, mFile in enumerate(list_of_mat):
 		mat = scipy.io.loadmat(mFile)
 		pose2_.append(mat['poses2'])

@@ -39,8 +39,8 @@ def main(_):
 
   with tf.Graph().as_default():
 		
-		builder = include.hg_graph_builder.HGgraphBuilder(FLAG)
-		
+		#builder = include.hg_graph_builder.HGgraphBuilder(FLAG)
+		builder = include.hg_graph_builder.HGgraphBuilder_MultiGPU(FLAG)
 		print ("build finished, There it stands, tall and strong...")
 		
 		
@@ -102,14 +102,26 @@ def main(_):
 							                       step + FLAG.structure_string  +'.ckpt')
 							print('Adding Model data for ', step, 'at ', save_path)
 					
-					fd = DataHolder.get_next_train_batch()
+					_x = []
+					y = []
+					gt = []
+					for i in map(int, FLAG.gpu_string.split('-')):
+						fd = DataHolder.get_next_train_batch()
+						_x.append(fd[0])
+						y.append(fd[1])
+						gt.append(fd[2])
+					
+					feed_dict = {i: d for i, d in zip(builder._x, _x),
+					            i_:d_	for i_, d_ in zip(builder.y, y)}
 					
 					if step % 10 == 1:
 						gt_ = fd[2]
+						feed_dict = {i: d for i, d in zip(builder._x, _x),
+													i_:d_ for i_, d_ in zip(builder.y, y)}
+							
 						summary, loss_, out_test = sess.run([merged, builder.loss,
-						                                     builder.output],
-						                             feed_dict={builder._x: fd[0],
-						                                        builder.y: fd[1]})
+						                                     builder.output], feed_dict)
+						                                    
 						err = utils.eval_utils.compute_precision(out_test, gt_,
 						                                          structure,
 						                                          FLAG.mul_factor,
@@ -121,8 +133,7 @@ def main(_):
 					
 					
 					loss_, _ = sess.run([builder.loss, builder.train_rmsprop],
-					                             feed_dict={builder._x: fd[0],
-					                                        builder.y:  fd[1]})
+					                             feed_dict)
 					
 					print("Grinding... Loss = " + str(loss_))
 			
