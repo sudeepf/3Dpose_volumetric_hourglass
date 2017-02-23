@@ -8,25 +8,31 @@ from skimage import measure, morphology
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 
 def get_list_all_training_frames(list_of_mat):
-	pose2 = np.empty((0,14,2))
-	scale = np.empty((0, 14, 2))
-	pose3 = np.empty((0,14,3))
-	files = np.empty((0))
+	
+	pose3_ = []
+	pose2_ = []
+	files_ = []
+	num_frames = 0
 	for mFile in list_of_mat:
-		#print(mFile)
 		mat = scipy.io.loadmat(mFile)
-		pose2 = np.concatenate((pose2,mat['poses2']),axis=0)
-		pose3 = np.concatenate((pose3, mat['poses3']), axis=0)
-		files = np.concatenate((files, mat['imgs']), axis=0)
-
+		pose2_.append(mat['poses2'])
+		pose3_.append(mat['poses3'])
+		files_.append(mat['imgs'])
+		num_frames += 1
+		
+	pose3 = np.concatenate(pose3_,axis=0)
+	pose2 = np.concatenate(pose2_, axis=0)
+	files = np.concatenate(files_, axis=0)
+	
 	return files, pose2, pose3
 
 
-def get_batch(imgFiles, pose2, pose3):
+def get_batch(imgFiles, pose2, pose3, FLAG):
 	data = []
 	for name in imgFiles:
 		#print(name)
-		im = misc.imread(name[1:])
+		im = misc.imread(FLAG.dataset_dir +
+		                 str(name).split('Dataset')[1].split('.jpg')[0] + '.jpg')
 		data.append(im)
 	return np.array(data), pose2, pose3
 

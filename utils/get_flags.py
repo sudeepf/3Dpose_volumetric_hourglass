@@ -73,7 +73,7 @@ def get_flags(config_file = None):
 	                            """input image channels""")
 	tf.app.flags.DEFINE_float('learning_rate', 5e-4,
 	                          """Define Learning rate""")
-	tf.app.flags.DEFINE_float('joint_prob_max', 100,
+	tf.app.flags.DEFINE_float('joint_prob_max', 1,
 	                          """This parameter basically boost the value of
 	                          joint's location probability which results in
 	                          the boosting of the value of loss, so faster

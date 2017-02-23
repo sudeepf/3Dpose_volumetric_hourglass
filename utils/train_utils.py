@@ -79,7 +79,8 @@ class DataHolder():
 		
 		if train or not (train):
 			image_b, pose2_b, pose3_b = utils.data_prep.get_batch(imgFiles,
-			                                                      pose2, pose3)
+			                                                      pose2, pose3,
+			                                                      self.FLAG)
 			
 			image_b, pose2_b, pose3_b = utils.data_prep.crop_data_top_down(image_b,
 			                                                               pose2_b,
@@ -93,7 +94,7 @@ class DataHolder():
 			                                                              self.FLAG.image_res,
 			                                                              self.FLAG.sigma,
 			                                                              self.FLAG.mul_factor,
-			                                                              self.joint_prob_max)
+			                                                              self.FLAG.joint_prob_max)
 			
 			# Batch - Joints - X - Y - Z
 			batch_data = np.swapaxes(batch_data, 1, 4)  # swap Z - Joint
