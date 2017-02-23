@@ -92,7 +92,8 @@ class DataHolder():
 			                                                              self.FLAG.volume_res,
 			                                                              self.FLAG.image_res,
 			                                                              self.FLAG.sigma,
-			                                                              self.FLAG.mul_factor)
+			                                                              self.FLAG.mul_factor,
+			                                                              self.joint_prob_max)
 			
 			# Batch - Joints - X - Y - Z
 			batch_data = np.swapaxes(batch_data, 1, 4)  # swap Z - Joint

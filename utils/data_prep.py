@@ -93,8 +93,8 @@ def data_vis(image, pose2, pose3, Cam_C, ind):
 	plt.scatter(x=p3[:,0],y=p3[:,1],c='b')
 	plt.show()
 	
-def gaussian(x, mu, sig):
-  return np.exp(-np.power(x - mu, 2.) / (2 * np.power(sig, 2.)))
+def gaussian(x, mu, sig, max_prob):
+  return max_prob * np.exp(-np.power(x - mu, 2.) / (2 * np.power(sig, 2.)))
 
 
 def plot_3d(image, threshold=0.5):
@@ -122,7 +122,7 @@ def plot_3d(image, threshold=0.5):
 
 
 def volumize_gt(image_b, pose2_b, pose3_b, resize_factor, im_resize_factor, \
-                                                        sigma, mul_factor):
+                                                sigma, mul_factor, max_prob):
 	num_of_data = np.shape(image_b)[0]
 	batch_data = np.empty((0,14,resize_factor,resize_factor,resize_factor))
 	pose2 = []
@@ -148,9 +148,9 @@ def volumize_gt(image_b, pose2_b, pose3_b, resize_factor, im_resize_factor, \
 		#vol_joint_ = np.zeros((64,64,64))
 		for jj in xrange(14):
 			for kk in xrange(resize_factor):
-				vec_x[0,kk] = gaussian(kk, p3_[jj,0], sigma)
-				vec_y[0,kk] = gaussian(kk, p3_[jj, 1], sigma)
-				vec_z[0,kk] = gaussian(kk, p3_[jj, 2], sigma)
+				vec_x[0,kk] = gaussian(kk, p3_[jj,0], sigma, max_prob)
+				vec_y[0,kk] = gaussian(kk, p3_[jj, 1], sigma, max_prob)
+				vec_z[0,kk] = gaussian(kk, p3_[jj, 2], sigma, max_prob)
 			bub = np.expand_dims( vec_y.transpose().dot(vec_x),axis = 0)
 			vol_joint = np.tensordot(bub, vec_z.transpose(), axes=([0],[1]))
 			vol_joint = np.expand_dims(vol_joint,axis=0)
