@@ -3,6 +3,7 @@ import numpy as np
 from os import listdir
 import os
 from os.path import isfile, join
+import matplotlib.pyplot as plt
 
 def variable_summaries(var, name):
 	"""Attach a lot of summaries to a Tensor  (for TensorBoard visualization)."""
@@ -19,8 +20,8 @@ def variable_summaries(var, name):
 		
 def image_summaries(img, name):
 	with tf.name_scope('summaries_image_' + name):
-		image_shaped_input = tf.reshape(x, [-1, 28, 28, 1])
-		tf.summary.image('input_'+name, image_shaped_input, 10)
+		
+		tf.summary.image(name, img, 10)
 
 def vox2img(vox, steps):
 	start_z = np.sum(steps[0:len(steps)-1])
@@ -51,3 +52,31 @@ def get_summary_writer(FLAG, sess):
 		                             '/train/', sess.graph), \
 		       tf.summary.FileWriter(FLAG.eval_dir + '/summaries/' + model_name +
 		                             '/test/', sess.graph)
+
+def add_all(x,y,output,loss):
+	tf.summary.scalar('loss', loss)
+	variable_summaries(y, 'label')
+	variable_summaries(y, 'output')
+	#img = tf.image.convert_image_dtype(img, dtype=tf.uint8)
+	img = tf.image.resize_images(x[0:1], [32, 32])
+	image_summaries(img,'input')
+	
+	# get heatmap on label and prediction
+	img= tf.reduce_sum(y[0:1,:,:,:14],3)
+	img = tf.reshape(img,(1,64,64,1))
+	x_min = tf.reduce_min(img)
+	x_max = tf.reduce_max(img)
+	img = (img - x_min) / (x_max - x_min)
+	img = tf.image.grayscale_to_rgb(img, name=None)
+	img = tf.image.convert_image_dtype(img, dtype=tf.uint8)
+	image_summaries(img,'label_heatmap')
+	
+	#get heatmap on output
+	img = tf.reduce_sum(output[0:1, :, :, :14], 3)
+	img = tf.reshape(img,(1,64,64,1))
+	x_min = tf.reduce_min(img)
+	x_max = tf.reduce_max(img)
+	img = (img - x_min) / (x_max - x_min)
+	img = tf.image.grayscale_to_rgb(img, name=None)
+	img = tf.image.convert_image_dtype(img, dtype=tf.uint8)
+	image_summaries(img,'output_heatmap')

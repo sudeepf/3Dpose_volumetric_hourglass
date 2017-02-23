@@ -103,9 +103,10 @@ def main(_):
 							print('Adding Model data for ', step, 'at ', save_path)
 					
 					fd = DataHolder.get_next_train_batch()
+					
 					if step % 10 == 1:
 						gt_ = fd[2]
-						summary, loss_, out_test = sess.run([builder.merged, builder.loss,
+						summary, loss_, out_test = sess.run([merged, builder.loss,
 						                                     builder.output],
 						                             feed_dict={builder._x: fd[0],
 						                                        builder.y: fd[1]})

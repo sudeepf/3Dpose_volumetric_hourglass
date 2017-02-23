@@ -5,7 +5,6 @@ import tensorflow as tf
 from os import listdir
 import os
 from os.path import isfile, join
-import numpy as np
 from scipy import misc
 
 
@@ -120,7 +119,7 @@ class DataHolder():
 			print('nothing')
 		# xs, ys = mnist.test.images, mnist.test.labels
 		# k = 1.0
-		return image_b, batch_output
+		return image, batch_output
 
 	def get_next_train_batch(self):
 		"""
@@ -132,5 +131,8 @@ class DataHolder():
 		offset = (self.train_iter * self.FLAG.batch_size) % (self.train_data_size -
 		                                                      self.FLAG.batch_size)
 		mask_ = self.mask_train[offset:(offset + self.FLAG.batch_size)]
-		return self.get_dict(True, self.imgFiles[mask_], self.pose2[mask_],
-		                 self.pose3[mask_])
+		fd = self.get_dict(True, self.imgFiles[mask_], self.pose2[mask_],
+		              self.pose3[mask_])
+		
+		self.train_iter += 1
+		return fd[0], fd[1], self.pose3[mask_]

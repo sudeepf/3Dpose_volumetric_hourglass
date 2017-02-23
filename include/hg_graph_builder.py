@@ -1,6 +1,7 @@
 import hourglass_TF.src.stacked_hourglass as hg
 import tensorflow as tf
 import numpy as np
+import utils.add_summary
 
 class HGgraphBuilder():
 	def __init__(self, FLAG):
@@ -33,3 +34,5 @@ class HGgraphBuilder():
 		self.train_step = tf.Variable(0, name='global_step', trainable=False)
 		
 		self.train_rmsprop = self.optimizer.minimize(self.loss, self.train_step)
+
+		utils.add_summary.add_all(self._x,self.y,self.output,self.loss)
