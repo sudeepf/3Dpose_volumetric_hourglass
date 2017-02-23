@@ -128,12 +128,18 @@ class DataHolder():
 		this function now my life becomes much simpler
 		"""
 		
-		offset = min(self.train_iter * self.FLAG.batch_size) , \
-		         (self.train_data_size - self.FLAG.batch_size)
+		offset = min((self.train_iter * self.FLAG.batch_size) , \
+		         (self.train_data_size - self.FLAG.batch_size))
 		mask_ = self.mask_train[offset:(offset + self.FLAG.batch_size)]
 		
 		fd = self.get_dict(True, self.imgFiles[mask_], self.pose2[mask_],
 		              self.pose3[mask_])
 		
 		self.train_iter += 1
+		
+		if self.train_iter * self.FLAG.batch_size > self.train_data_size:
+			print('<<<<<<<<<<<<<<<<<:Epoch:>>>>>>>>>>>>>>>>> ')
+			self.train_iter = 0
+			self.mask_train = np.random.permutation(self.train_data_size)
+			
 		return fd[0], fd[1], self.pose3[mask_]
