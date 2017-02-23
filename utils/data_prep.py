@@ -12,14 +12,16 @@ def get_list_all_training_frames(list_of_mat):
 	pose3_ = []
 	pose2_ = []
 	files_ = []
-	num_frames = 0
-	for mFile in list_of_mat:
+	
+	for ind, mFile in enumerate(list_of_mat):
 		mat = scipy.io.loadmat(mFile)
 		pose2_.append(mat['poses2'])
 		pose3_.append(mat['poses3'])
 		files_.append(mat['imgs'])
-		num_frames += 1
-		
+		ratio = 100*(ind/len(list_of_mat))
+		if ratio%10 == 0:
+			print('Successfully loaded -> ', ratio, '%')
+			
 	pose3 = np.concatenate(pose3_,axis=0)
 	pose2 = np.concatenate(pose2_, axis=0)
 	files = np.concatenate(files_, axis=0)
