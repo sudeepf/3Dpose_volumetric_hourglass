@@ -118,7 +118,7 @@ class HGgraphBuilder_MultiGPU():
 				summaries.append(tf.summary.histogram(var.op.name, var))
 			
 	
-	def tower_loss(_x, y, gt, steps, scope,FLAG, name):
+	def tower_loss(self, _x, y, gt, steps, scope,FLAG, name):
 		"""Calculate the total loss on a single tower running the CIFAR model.
 		Args:
 			scope: unique prefix string identifying the CIFAR tower, e.g. 'tower_0'
@@ -131,25 +131,28 @@ class HGgraphBuilder_MultiGPU():
 		# assemble the total_loss using a custom function below.
 		
 		
+			
+		with tf.variable_scope(scope):
 		
+			output = hg.stacked_hourglass(steps, 'stacked_hourglass')(_x)
 		
-		output = hg.stacked_hourglass(steps, 'stacked_hourglass')(_x)
+			# Defining Loss with root mean square error
+			loss = tf.reduce_mean(tf.square(output - y))
 		
-		# Defining Loss with root mean square error
-		loss = tf.reduce_mean(tf.square(output - y))
+			# Calculate the total loss for the current tower.
+			tf.add_to_collection('losses',loss)
+			# Calculate the total loss for the current tower.
+			total_loss = tf.add_n(tf.get_collection('losses', scope), name='total_loss')	
+			# Attach a scalar summary to all individual losses and the total loss; do the
+			# same for the averaged version of the losses.
+			# Remove 'tower_[0-9]/' from the name in case this is a multi-GPU training
+			# session. This helps the clarity of presentation on tensorboard.
 		
-		# Calculate the total loss for the current tower.
+			tf.summary.scalar(name, loss)
 		
-		# Attach a scalar summary to all individual losses and the total loss; do the
-		# same for the averaged version of the losses.
-		# Remove 'tower_[0-9]/' from the name in case this is a multi-GPU training
-		# session. This helps the clarity of presentation on tensorboard.
-		
-		tf.summary.scalar(name, loss)
-		
-		return loss
+		return total_loss
 	
-	def average_gradients(tower_grads):
+	def average_gradients(self, tower_grad):
 		"""Calculate the average gradient for each shared variable across all towers.
 		Note that this function provides a synchronization point across all towers.
 		Args:
@@ -160,26 +163,47 @@ class HGgraphBuilder_MultiGPU():
 			 List of pairs of (gradient, variable) where the gradient has been averaged
 			 across all towers.
 		"""
-		average_grads = []
-		for grad_and_vars in zip(*tower_grads):
+		n_gpus = len( tower_grad )
+	        n_trainable_variables = len(tower_grad[0] )
+        	tf_avg_gradient = []
+
+        	for i in range( n_trainable_variables ): #loop over trainable variables
+            		t_var = tower_grad[0][i][1]
+
+            		t0_grad = tower_grad[0][i][0]
+            		t1_grad = tower_grad[1][i][0]
+
+           		 # ti_grad = [] #get Gradients from each gpus
+            		# for gpu_ in range( n_gpus ):
+            		#     ti_grad.append( tower_grad[gpu_][i][0] )
+            		#
+            		# grad_total = tf.add_n( ti_grad, name='gradient_adder' )
+            		grad_total = tf.add( t0_grad, t1_grad )
+
+            		frac = 1.0 / float(n_gpus)
+            		t_avg_grad = tf.mul( grad_total ,  frac, name='gradi_scaling' )
+
+            		tf_avg_gradient.append( (t_avg_grad, t_var) )
+
+		#for grad_and_vars in zip(*tower_grads):
 			# Note that each grad_and_vars looks like the following:
 			#   ((grad0_gpu0, var0_gpu0), ... , (grad0_gpuN, var0_gpuN))
-			grads = []
-			for g, _ in grad_and_vars:
-				# Add 0 dimension to the gradients to represent the tower.
-				expanded_g = tf.expand_dims(g, 0)
-				
+		#	grads = []
+		#	for g, _ in grad_and_vars:
+		#		# Add 0 dimension to the gradients to represent the tower.
+		#		#expanded_g = tf.expand_dims(g, 0)
+		#		
 				# Append on a 'tower' dimension which we will average over below.
-				grads.append(expanded_g)
+		#		grads.append(g)
 			
 			# Average over the 'tower' dimension.
-			grad = tf.concat(grads, 0)
-			grad = tf.reduce_mean(grad, 0)
+		#	grad = tf.concat(grads, 0)
+		#	grad = tf.reduce_mean(grad, 0)
 			
 			# Keep in mind that the Variables are redundant because they are shared
 			# across towers. So .. we will just return the first tower's pointer to
 			# the Variable.
-			v = grad_and_vars[0][1]
-			grad_and_var = (grad, v)
-			average_grads.append(grad_and_var)
-		return average_grads
+		#	v = grad_and_vars[0][1]
+		#	grad_and_var = (grad, v)
+		#	average_grads.append(grad_and_var)
+		return tf_avg_gradients
