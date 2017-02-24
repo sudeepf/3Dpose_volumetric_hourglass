@@ -32,7 +32,7 @@ def get_list_all_training_frames(list_of_mat):
 def get_batch(imgFiles, pose2, pose3, FLAG):
 	data = []
 	for name in imgFiles:
-		im = misc.imread(name)
+		im = misc.imread(name[1:])
 		data.append(im)
 	return np.array(data), pose2, pose3
 
