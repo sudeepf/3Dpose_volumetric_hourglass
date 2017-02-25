@@ -132,9 +132,10 @@ def main(_):
 						continue
 					
 					
-					loss_, _ = sess.run([builder.loss, builder.train_rmsprop],
+					summary, loss_, _ = sess.run([merged, builder.loss, builder.train_rmsprop],
 					                             feed_dict_x)
-					
+					train_writer.add_summary(summary, step)
+							
 					print("Grinding... Loss = " + str(loss_))
 			
 			train_writer.close()

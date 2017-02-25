@@ -61,7 +61,7 @@ class HGgraphBuilder_MultiGPU():
 			steps = map(int, FLAG.structure_string.split('-'))
 			total_dim = np.sum(np.array(steps))
 			
-			with tf.variable_scope(tf.get_variable_scope()):
+			with tf.variable_scope('model_graph'):
 				for i in map(int, FLAG.gpu_string.split('-')):
 					with tf.device('/gpu:%d' % i):
 						with tf.name_scope('GPU_%d' % (i)) as scope:
@@ -139,16 +139,16 @@ class HGgraphBuilder_MultiGPU():
 		
 		
 			
-		with tf.variable_scope(scope):
-		
-			output = hg.stacked_hourglass(steps, 'stacked_hourglass')(_x)
-		
-			# Defining Loss with root mean square error
-			loss = tf.reduce_mean(tf.square(output - y))
-		
-			# Calculate the total loss for the current tower.
-			tf.add_to_collection('losses',loss)
-			# Calculate the total loss for the current tower.
+	#with tf.variable_scope(scope):
+	
+		output = hg.stacked_hourglass(steps, 'stacked_hourglass')(_x)
+	
+		# Defining Loss with root mean square error
+		loss = tf.reduce_mean(tf.square(output - y))
+	
+		# Calculate the total loss for the current tower.
+		tf.add_to_collection('losses',loss)
+		# Calculate the total loss for the current tower.
 		total_loss = tf.add_n(tf.get_collection('losses', scope), name='total_loss')
 		
 		return total_loss, output
