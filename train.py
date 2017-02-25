@@ -117,7 +117,7 @@ def main(_):
 					feed_dict_x.update(feed_dict_y)
 					
 					
-					if step % 10 == 1:
+					if False: #step % 10 == 1:
 						gt_ = fd[2]
 						summary, loss_, out_test = sess.run([merged, builder.loss,
 						                                     builder.output], feed_dict_x)

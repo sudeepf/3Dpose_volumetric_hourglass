@@ -10,7 +10,7 @@ class stacked_hourglass():
 	def __call__(self, x):
 		with tf.name_scope(self.name) as scope:
 			padding = tf.pad(x, [[0, 0], [3, 3], [3, 3], [0, 0]], name='padding')
-			with tf.name_scope("preprocessing") as sc:
+			with tf.variable_scope("preprocessing") as sc:
 				conv1 = self._conv(padding, 64, 7, 2, 'VALID', 'conv1')
 				norm1 = tf.contrib.layers.batch_norm(conv1, 0.9, epsilon=1e-5,
 				                                     activation_fn=tf.nn.relu, scope=sc)
@@ -25,7 +25,7 @@ class stacked_hourglass():
 			out = [None] * self.nb_stack
 			out_ = [None] * self.nb_stack
 			sum_ = [None] * self.nb_stack
-			with tf.name_scope('_hourglass_0_with_supervision') as sc:
+			with tf.variable_scope('_hourglass_0_with_supervision') as sc:
 				hg[0] = self._hourglass(r3, 4, 256, '_hourglass')
 				ll[0] = self._conv_bn_relu(hg[0], 256, name='conv_1')
 				ll_[0] = self._conv(ll[0], 256, 1, 1, 'VALID', 'll')
@@ -33,14 +33,14 @@ class stacked_hourglass():
 				out_[0] = self._conv(out[0], 256, 1, 1, 'VALID', 'out_')
 				sum_[0] = tf.add_n([ll_[0], out_[0], r3])
 			for i in range(1, self.nb_stack - 1):
-				with tf.name_scope('_hourglass_' + str(i) + '_with_supervision') as sc:
+				with tf.variable_scope('_hourglass_' + str(i) + '_with_supervision') as sc:
 					hg[i] = self._hourglass(sum_[i - 1], 4, 256, '_hourglass')
 					ll[i] = self._conv_bn_relu(hg[i], 256, name='conv_1')
 					ll_[i] = self._conv(ll[i], 256, 1, 1, 'VALID', 'll')
 					out[i] = self._conv(ll[i], 14*self.steps[i], 1, 1, 'VALID', 'out')
 					out_[i] = self._conv(out[i], 256, 1, 1, 'VALID', 'out_')
 					sum_[i] = tf.add_n([ll_[i], out_[i], sum_[i - 1]])
-			with tf.name_scope(
+			with tf.variable_scope(
 						'_hourglass_' + str(self.nb_stack - 1) + '_with_supervision') as sc:
 				hg[self.nb_stack - 1] = self._hourglass(sum_[self.nb_stack - 2], 4, 256,
 				                                        '_hourglass')
@@ -54,26 +54,25 @@ class stacked_hourglass():
 	
 	def _conv(self, inputs, nb_filter, kernel_size=1, strides=1, pad='VALID',
 	          name='conv'):
-		with tf.name_scope(name) as scope:
-			kernel = tf.Variable(
-				tf.contrib.layers.xavier_initializer(uniform=False)([kernel_size, \
-				                                                     kernel_size,
-				                                                     inputs.get_shape().as_list()[
-					                                                     3], nb_filter]),
-				name='weights')
+		with tf.variable_scope(name) as scope:
+			with tf.device('/cpu:0'):
+				shape=[kernel_size,kernel_size,inputs.get_shape().as_list()[3],
+				       nb_filter]
+				kernel = tf.get_variable(name, shape, initializer = \
+					                       tf.contrib.layers.xavier_initializer(
+						                       uniform=False))
 			conv = tf.nn.conv2d(inputs, kernel, [1, strides, strides, 1], padding=pad,
 			                    data_format='NHWC')
 			return conv
 	
 	def _conv_bn_relu(self, inputs, nb_filter, kernel_size=1, strides=1,
-	                  name=None):
-		with tf.name_scope(name) as scope:
-			kernel = tf.Variable(
-				tf.contrib.layers.xavier_initializer(uniform=False)([kernel_size, \
-				                                                     kernel_size,
-				                                                     inputs.get_shape().as_list()[
-					                                                     3], nb_filter]),
-				name='weights')
+	                  name='weights'):
+		with tf.variable_scope(name) as scope:
+			with tf.device('/cpu:0'):
+				shape=[kernel_size,kernel_size,inputs.get_shape().as_list()[3],
+				       nb_filter]
+				kernel = tf.get_variable(name,shape, initializer = \
+				tf.contrib.layers.xavier_initializer(uniform=False))
 			conv = tf.nn.conv2d(inputs, kernel, [1, strides, strides, 1],
 			                    padding='SAME', data_format='NHWC')
 			norm = tf.contrib.layers.batch_norm(conv, 0.9, epsilon=1e-5,
@@ -81,16 +80,16 @@ class stacked_hourglass():
 			return norm
 	
 	def _conv_block(self, inputs, nb_filter_out, name='_conv_block'):
-		with tf.name_scope(name) as scope:
-			with tf.name_scope('norm_conv1') as sc:
+		with tf.variable_scope(name) as scope:
+			with tf.variable_scope('norm_conv1') as sc:
 				norm1 = tf.contrib.layers.batch_norm(inputs, 0.9, epsilon=1e-5,
 				                                     activation_fn=tf.nn.relu, scope=sc)
 				conv1 = self._conv(norm1, nb_filter_out / 2, 1, 1, 'SAME', name='conv1')
-			with tf.name_scope('norm_conv2') as sc:
+			with tf.variable_scope('norm_conv2') as sc:
 				norm2 = tf.contrib.layers.batch_norm(conv1, 0.9, epsilon=1e-5,
 				                                     activation_fn=tf.nn.relu, scope=sc)
 				conv2 = self._conv(norm2, nb_filter_out / 2, 3, 1, 'SAME', name='conv2')
-			with tf.name_scope('norm_conv3') as sc:
+			with tf.variable_scope('norm_conv3') as sc:
 				norm3 = tf.contrib.layers.batch_norm(conv2, 0.9, epsilon=1e-5,
 				                                     activation_fn=tf.nn.relu, scope=sc)
 				conv3 = self._conv(norm3, nb_filter_out, 1, 1, 'SAME', name='conv3')
@@ -105,18 +104,17 @@ class stacked_hourglass():
 				return conv
 	
 	def _residual_block(self, inputs, nb_filter_out, name='_residual_block'):
-		with tf.name_scope(name) as scope:
+		with tf.variable_scope(name) as scope:
 			_conv_block = self._conv_block(inputs, nb_filter_out)
 			_skip_layer = self._skip_layer(inputs, nb_filter_out)
 			return tf.add(_skip_layer, _conv_block)
 	
 	def _hourglass(self, inputs, n, nb_filter_res, name='_hourglass'):
-		with tf.name_scope(name) as scope:
+		with tf.variable_scope(name) as scope:
 			# Upper branch
 			up1 = self._residual_block(inputs, nb_filter_res, 'up1')
 			# Lower branch
-			pool = tf.contrib.layers.max_pool2d(inputs, [2, 2], [2, 2], 'VALID',
-			                                    scope=scope)
+			pool = tf.contrib.layers.max_pool2d(inputs, [2, 2], [2, 2], 'VALID')
 			low1 = self._residual_block(pool, nb_filter_res, 'low1')
 			if n > 1:
 				low2 = self._hourglass(low1, n - 1, nb_filter_res, 'low2')

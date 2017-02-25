@@ -56,6 +56,8 @@ class HGgraphBuilder_MultiGPU():
 			self._x = []
 			self.y  = []
 			self.gt = []
+			self.loss = 0
+			self.output = []
 			steps = map(int, FLAG.structure_string.split('-'))
 			total_dim = np.sum(np.array(steps))
 			
@@ -79,14 +81,14 @@ class HGgraphBuilder_MultiGPU():
 							                                 3])
 							
 							
-							loss = self.tower_loss(_x, y, gt, steps,
+							loss, output = self.tower_loss(_x, y, gt, steps,
 							                       scope,FLAG, 'GPU_%d' % (i))
 							
 							# Reuse variables for the next tower.
 							tf.get_variable_scope().reuse_variables()
+							self.output.append(output)
+							# Add Device spec summaries
 							
-							# Retain the summaries from the final tower.
-							summaries = tf.get_collection(tf.GraphKeys.SUMMARIES, scope)
 							
 							# Calculate the gradients for the batch of data on this CIFAR tower.
 							grads = self.optimizer.compute_gradients(loss)
@@ -98,7 +100,12 @@ class HGgraphBuilder_MultiGPU():
 							self._x.append(_x)
 							self.y.append(y)
 							self.gt.append(gt)
-			
+							
+							self.loss += loss
+					tf.summary.scalar(('GPU_%d_' % (i)) + 'loss', loss)
+					# Retain the summaries from the final tower.
+					summaries = tf.get_collection(tf.GraphKeys.SUMMARIES, scope)
+		
 			# We must calculate the mean of each gradient. Note that this is the
 			# synchronization point across all towers.
 			grads = self.average_gradients(tower_grads)
@@ -110,7 +117,7 @@ class HGgraphBuilder_MultiGPU():
 						tf.summary.histogram(var.op.name + '/gradients', grad))
 			
 			# Apply the gradients to adjust the shared variables.
-			self.apply_gradient_op = self.optimizer.apply_gradients(grads,
+			self.train_rmsprop = self.optimizer.apply_gradients(grads,
 			                                                   global_step=global_step)
 			
 			# Add histograms for trainable variables.
@@ -142,15 +149,9 @@ class HGgraphBuilder_MultiGPU():
 			# Calculate the total loss for the current tower.
 			tf.add_to_collection('losses',loss)
 			# Calculate the total loss for the current tower.
-			total_loss = tf.add_n(tf.get_collection('losses', scope), name='total_loss')	
-			# Attach a scalar summary to all individual losses and the total loss; do the
-			# same for the averaged version of the losses.
-			# Remove 'tower_[0-9]/' from the name in case this is a multi-GPU training
-			# session. This helps the clarity of presentation on tensorboard.
+		total_loss = tf.add_n(tf.get_collection('losses', scope), name='total_loss')
 		
-			tf.summary.scalar(name, loss)
-		
-		return total_loss
+		return total_loss, output
 	
 	def average_gradients(self, tower_grads):
 		"""Calculate the average gradient for each shared variable across all towers.

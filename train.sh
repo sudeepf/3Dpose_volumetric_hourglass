@@ -5,5 +5,4 @@ nice -n 10 python train.py \
 --batch_size=1 \
 --joint_prob_max=10 \
 --sigma=1 \
---load_ckpt_path=/home/capstone/Sudeep/Capstone/3Dpose/tensor_record/tmp/model1-64.ckpt \
 --gpu_string=0
