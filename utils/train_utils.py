@@ -121,7 +121,7 @@ class DataHolder():
 			print('nothing')
 		# xs, ys = mnist.test.images, mnist.test.labels
 		# k = 1.0
-		return image, batch_output
+		return image, batch_output, pose3
 
 	def get_next_train_batch(self):
 		"""
@@ -144,4 +144,4 @@ class DataHolder():
 			self.train_iter = 0
 			self.mask_train = np.random.permutation(self.train_data_size)
 			
-		return fd[0], fd[1], self.pose3[mask_]
+		return fd[0], fd[1], fd[2]

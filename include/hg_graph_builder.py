@@ -2,6 +2,7 @@ import hourglass_TF.src.stacked_hourglass as hg
 import tensorflow as tf
 import numpy as np
 import utils.add_summary
+import utils.eval_utils
 
 class HGgraphBuilder():
 	def __init__(self, FLAG):
@@ -102,10 +103,19 @@ class HGgraphBuilder_MultiGPU():
 							self.gt.append(gt)
 							
 							self.loss += loss
+					
 					tf.summary.scalar(('GPU_%d_' % (i)) + 'loss', loss)
 					# Retain the summaries from the final tower.
 					summaries = tf.get_collection(tf.GraphKeys.SUMMARIES, scope)
-		
+			
+			self.loss /= len(map(int, FLAG.gpu_string.split('-')))
+			
+			utils.add_summary.add_all_joints(
+				utils.eval_utils.get_precision_MultiGPU(self.output,self.y,[], FLAG),
+				FLAG)
+			
+			utils.add_summary.add_all(self._x[0], self.y[0], self.output[0],
+			                          self.loss)
 			# We must calculate the mean of each gradient. Note that this is the
 			# synchronization point across all towers.
 			grads = self.average_gradients(tower_grads)
