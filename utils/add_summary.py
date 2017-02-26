@@ -28,14 +28,16 @@ def vox2img(vox, steps):
 	size = steps[-1]
 	img = tf.reduce_sum(vox,[0,0,0,start_z],[1,64,64,size],2)
 	
-def add_all_joints(prec, summary, name='precision'):
+def add_all_joints(prec, FLAG, name='precision/'):
 	summary_ = tf.Summary()
-	summary_.ParseFromString(sess.run(summary))
-	for j, err in enumerate(prec):
-		summary_.value.add(name+'joint_%02d' % j , err)
-	#adding total error
-	summary_.value.add(name+'total_error',np.sum(prec))
-	
+	steps = map(int, FLAG.structure_string.split('-'))
+	for step in steps:
+		with tf.name_scope('Step_%d' % (step)):
+			prec_step = tf.slice(prec,[0,0],[1,FLAG.num_joints])
+			prec_step = tf.squeeze(prec_step)
+			for j in xrange(FLAG.num_joints):
+				tf.summary.scalar('joint_%d' % j,prec_step[j])
+			
 def get_summary_writer(FLAG, sess):
 	onlyFolders = [f for f in listdir(FLAG.eval_dir+'/summaries/') if
 	               isfile(join(FLAG.eval_dir+'/summaries/', f)) != 1]

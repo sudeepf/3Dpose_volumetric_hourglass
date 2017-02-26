@@ -1,6 +1,6 @@
 import tensorflow as tf
 import numpy as np
-import add_summary as summ
+import utils.add_summary as summ
 from numpy import unravel_index
 import matplotlib.pyplot as plt
 
@@ -72,3 +72,62 @@ def get_coordinate(prediction, steps, num_joints):
 	# plt.scatter(x=cords[0,:, 0], y=cords[0,:, 1], c='b')
 	# plt.show()
 	return cords
+
+def unravel_argmax(argmax, shape):
+  output_list = []
+  output_list.append(tf.cast(argmax / (shape[1] * shape[2]),tf.float32))
+  output_list.append(tf.cast(tf.mod(argmax , (shape[1] * shape[2])) / shape[2],
+                     tf.float32))
+  output_list.append(tf.cast(tf.mod((tf.mod(argmax , (shape[1] * shape[2])) /
+                               shape[2]), shape[2]),tf.float32))
+  return tf.stack(output_list)
+
+def get_coordinate_tensor(vol, steps, batch_size, vol_res, joints):
+	"""This Function Basically convert volumetric rep to coordinate based rep
+	returns a list of coordinates for each batch and each step and each joint
+	"""
+	cords = []
+	total_dim = np.sum(np.array(steps))
+	vol = tf.reshape(vol,[batch_size,vol_res,vol_res,total_dim,joints])
+	step_c = 0
+	for bi in xrange(batch_size):
+		v = tf.slice(vol,[bi,0,0,0,0],[1,vol_res,vol_res,total_dim,joints])
+		v = tf.squeeze(v)
+		for si in xrange(len(steps)):
+			v_ = tf.slice(v,[0,0,step_c,0],[vol_res,vol_res,steps[si],joints])
+			step_c += steps[si]
+			for j in xrange(joints):
+				v_j = tf.slice(v_,[0,0,0,j],[vol_res,vol_res,steps[si],1])
+				#v_j = tf.squeeze(v_j)
+				v_jf = tf.argmax(tf.reshape(v_j,[-1]),axis=0)
+				cord_ = unravel_argmax(v_jf, tf.cast(tf.shape(v_j),tf.int64))
+				cords.append(cord_)
+	return cords
+
+def get_precision_MultiGPU(output, y, scale, FLAG):
+	batch_size = FLAG.batch_size
+	joints = FLAG.num_joints
+	steps = map(int, FLAG.structure_string.split('-'))
+	total_dim = np.sum(np.array(steps))
+	vol_res = FLAG.volume_res
+	output_cords = []
+	y_cords = []
+	for out_, y_ in zip(output,y):
+		output_cords.append(get_coordinate_tensor(out_, steps, batch_size, vol_res,
+		                                     joints))
+		y_cords.append(get_coordinate_tensor(y_, steps, batch_size, vol_res,
+		                                     joints))
+	
+	# Convert list of arrays to tensor
+	out_cord_t = tf.stack(output_cords)
+	y_cord_t = tf.stack(y_cords)
+	#Reshape to make it iterable
+	out_cord_t = tf.reshape(out_cord_t, [len(output_cords)*batch_size,
+	                                   len(steps), joints, 3])
+	y_cord_t = tf.reshape(y_cord_t, [len(output_cords)*batch_size, len(steps),
+	                                 joints, 3])
+	
+	# Iterate over tensors
+	joint_prec = tf.reduce_mean( tf.norm(out_cord_t - y_cord_t, axis=3), axis=0)
+	
+	return joint_prec

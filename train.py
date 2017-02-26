@@ -57,9 +57,8 @@ def main(_):
 	
 	
 			train_writer, test_writer=utils.add_summary.get_summary_writer(FLAG, sess)
-			
+			print(FLAG.load_ckpt_path)
 			ckpt = tf.train.get_checkpoint_state(FLAG.load_ckpt_path)
-			
 			if ckpt and ckpt.model_checkpoint_path:
 				if os.path.isabs(ckpt.model_checkpoint_path):
 					# Restores from checkpoint with absolute path.
@@ -76,9 +75,9 @@ def main(_):
 				print('Succesfully loaded model from %s at step=%s.' %
 				      (ckpt.model_checkpoint_path, global_step))
 			else:
-					print('No checkpoint file found')
-					tf.global_variables_initializer().run()
-					print('model Initialized...')
+				print('No checkpoint file found')
+				tf.global_variables_initializer().run()
+				print('model Initialized...')
 	
 			
 	
@@ -91,20 +90,22 @@ def main(_):
 	
 			for step in range(DataHolder.train_data_size):
 					
-					if step % 100 == 99:  # Record execution stats
+					if step % 1000 == 99:  # Record execution stats
 							save_path = saver.save(sess,
 							                       FLAG.eval_dir+"/tmp/model" +
 							                       FLAG.structure_string+".ckpt")
 							print('Adding Model data for ', step, 'at ', save_path)
 					
-					if step % 1000 == 999:  # Record execution stats
-							save_path = saver.save(sess, FLAG.model_path + '/model_%05d_' %
+					if step % 10000 == 9999:  # Record execution stats
+							save_path = saver.save(sess, FLAG.checkpoint_dir +
+							                       '/model_%05d_' %
 							                       step + FLAG.structure_string  +'.ckpt')
 							print('Adding Model data for ', step, 'at ', save_path)
 					
 					_x = []
 					y = []
 					gt = []
+					
 					for i in map(int, FLAG.gpu_string.split('-')):
 						fd = DataHolder.get_next_train_batch()
 						_x.append(fd[0])
@@ -113,28 +114,23 @@ def main(_):
 					
 					feed_dict_x = {i:d for i, d in zip(builder._x, _x)}
 					feed_dict_y = {i:d	for i, d in zip(builder.y, y)}
-					
+					feed_dict_gt = {i: d for i, d in zip(builder.gt, gt)}
 					feed_dict_x.update(feed_dict_y)
+					feed_dict_x.update(feed_dict_gt)
 					
 					
-					if False: #step % 10 == 1:
-						gt_ = fd[2]
-						summary, loss_, out_test = sess.run([merged, builder.loss,
-						                                     builder.output], feed_dict_x)
-						                                    
-						err = utils.eval_utils.compute_precision(out_test, gt_,
-						                                          structure,
-						                                          FLAG.mul_factor,
-						                                          FLAG.num_joints)
+					if step % 10 == 1:
 						
+						summary, loss_, _ = sess.run([merged, builder.loss,
+						                              builder.train_rmsprop ], feed_dict_x)
+						                                    
 						train_writer.add_summary(summary, step)
-						print ("Current Accuracy is" + str(np.sum(err)))
+						
 						continue
 					
 					
 					summary, loss_, _ = sess.run([merged, builder.loss, builder.train_rmsprop],
 					                             feed_dict_x)
-					train_writer.add_summary(summary, step)
 							
 					print("Grinding... Loss = " + str(loss_))
 			
