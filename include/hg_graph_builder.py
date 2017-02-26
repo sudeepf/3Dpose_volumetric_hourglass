@@ -126,21 +126,8 @@ class HGgraphBuilder_MultiGPU():
 			
 	
 	def tower_loss(self, _x, y, gt, steps, scope,FLAG, name):
-		"""Calculate the total loss on a single tower running the CIFAR model.
-		Args:
-			scope: unique prefix string identifying the CIFAR tower, e.g. 'tower_0'
-		Returns:
-			 Tensor of shape [] containing the total loss for a batch of data
+		"""Calculate the total loss on a single tower running the HourGlass model.
 		"""
-		# Get images and labels for CIFAR-10.
-		# Build inference Graph.
-		# Build the portion of the Graph calculating the losses. Note that we will
-		# assemble the total_loss using a custom function below.
-		
-		
-			
-	#with tf.variable_scope(scope):
-	
 		output = hg.stacked_hourglass(steps, 'stacked_hourglass')(_x)
 	
 		# Defining Loss with root mean square error
