@@ -31,9 +31,11 @@ def vox2img(vox, steps):
 def add_all_joints(prec, FLAG, name='precision/'):
 	summary_ = tf.Summary()
 	steps = map(int, FLAG.structure_string.split('-'))
-	for step in steps:
+	step_c = 0
+	for s, step in enumerate(steps):
 		with tf.name_scope('Step_%d' % (step)):
-			prec_step = tf.slice(prec,[0,0],[1,FLAG.num_joints])
+			prec_step = tf.slice(prec,[s,0],[1,FLAG.num_joints])
+			step_c += step
 			prec_step = tf.squeeze(prec_step)
 			for j in xrange(FLAG.num_joints):
 				tf.summary.scalar('joint_%d' % j,prec_step[j])

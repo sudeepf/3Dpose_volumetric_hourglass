@@ -89,10 +89,11 @@ def get_coordinate_tensor(vol, steps, batch_size, vol_res, joints):
 	cords = []
 	total_dim = np.sum(np.array(steps))
 	vol = tf.reshape(vol,[batch_size,vol_res,vol_res,total_dim,joints])
-	step_c = 0
+	
 	for bi in xrange(batch_size):
 		v = tf.slice(vol,[bi,0,0,0,0],[1,vol_res,vol_res,total_dim,joints])
 		v = tf.squeeze(v)
+		step_c = 0
 		for si in xrange(len(steps)):
 			v_ = tf.slice(v,[0,0,step_c,0],[vol_res,vol_res,steps[si],joints])
 			step_c += steps[si]

@@ -121,18 +121,18 @@ class HGgraphBuilder_MultiGPU():
 			grads = self.average_gradients(tower_grads)
 			
 			# Add histograms for gradients.
-			for grad, var in grads:
-				if grad is not None:
-					summaries.append(
-						tf.summary.histogram(var.op.name + '/gradients', grad))
+			#for grad, var in grads:
+			#	if grad is not None:
+			#		summaries.append(
+			#			tf.summary.histogram(var.op.name + '/gradients', grad))
 			
 			# Apply the gradients to adjust the shared variables.
 			self.train_rmsprop = self.optimizer.apply_gradients(grads,
 			                                                   global_step=global_step)
 			
 			# Add histograms for trainable variables.
-			for var in tf.trainable_variables():
-				summaries.append(tf.summary.histogram(var.op.name, var))
+			#for var in tf.trainable_variables():
+			#	summaries.append(tf.summary.histogram(var.op.name, var))
 			
 	
 	def tower_loss(self, _x, y, gt, steps, scope,FLAG, name):
