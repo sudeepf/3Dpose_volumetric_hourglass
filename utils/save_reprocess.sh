@@ -1,5 +1,5 @@
-nice -n 10 python train.py \
---structure_string=64 \
+nice -n 10 python utils/save_preprocess.py \
+--structure_string=1-2-64 \
 --data_split_string_train=S1 \
 --data_split_string_test=S1 \
 --batch_size=4 \

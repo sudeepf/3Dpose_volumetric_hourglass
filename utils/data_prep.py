@@ -6,6 +6,8 @@ from scipy import misc
 import matplotlib.pyplot as plt
 from skimage import measure, morphology
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
+import tensorflow as tf
+
 
 def get_list_all_training_frames(list_of_mat):
 	
@@ -32,7 +34,7 @@ def get_list_all_training_frames(list_of_mat):
 def get_batch(imgFiles, pose2, pose3, FLAG):
 	data = []
 	for name in imgFiles:
-		im = misc.imread(name[:])
+		im = misc.imread(name[1:])
 		data.append(im)
 	return np.array(data), pose2, pose3
 
@@ -97,7 +99,7 @@ def data_vis(image, pose2, pose3, Cam_C, ind):
 	implot = plt.imshow(im)
 	plt.scatter(x=p2[:,0],y=p2[:,1],c='r')
 	plt.scatter(x=p3[:,0],y=p3[:,1],c='b')
-	plt.show()
+plt.show()
 	
 def gaussian(x, mu, sig, max_prob):
   return max_prob * np.exp(-np.power(x - mu, 2.) / (2 * np.power(sig, 2.)))
@@ -170,6 +172,8 @@ def volumize_gt(image_b, pose2_b, pose3_b, resize_factor, im_resize_factor, \
 		image.append(im_)
 		
 	return batch_data,image, pose2, pose3
+
+
 
 def prepare_output(batch_data,steps = [1, 2, 4, 64]):
 	out_res = np.shape(batch_data)[0]

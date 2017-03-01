@@ -145,3 +145,70 @@ class DataHolder():
 			self.mask_train = np.random.permutation(self.train_data_size)
 			
 		return fd[0], fd[1], fd[2]
+	
+	def get_preprocessed(self):
+		"""
+		returns preprocessed data for saving
+		:return:
+		"""
+		
+		
+		offset = min((self.train_iter * 1), \
+		             (self.train_data_size - 1))
+		
+		imgFiles_ =  self.imgFiles[offset:(offset + 1)]
+		pose2_ = self.pose2[offset:(offset + 1)]
+		pose3_ = self.pose3[offset:(offset + 1)]
+		
+		image_b, pose2_b, pose3_b = utils.data_prep.get_batch(imgFiles_,
+		                                                      pose2_, pose3_,
+		                                                      self.FLAG)
+		
+		image_b, pose2_b, pose3_b = utils.data_prep.crop_data_top_down(image_b,
+		                                                               pose2_b,
+		                                                               pose3_b)
+		
+		num_of_data = np.shape(image_b)[0]
+		
+		pose2 = []
+		pose3 = []
+		image = []
+		
+		vec_x = np.empty((self.FLAG.num_joints, self.FLAG.volume_res))
+		vec_y = np.empty((self.FLAG.num_joints, self.FLAG.volume_res))
+		vec_z = np.empty((self.FLAG.num_joints, self.FLAG.volume_res))
+		
+		for ii in xrange(num_of_data):
+			# print (ii, im_resize_factor, np.shape(image_b[ii]))
+			im_ = misc.imresize(image_b[ii], (self.FLAG.image_res,
+			                                  self.FLAG.image_res))
+			size_scale_ = np.array(np.shape(image_b[ii])[:2], dtype=np.float) / \
+			              np.array(self.FLAG.volume_res, dtype=np.float)
+			p2_ = pose2_b[ii] / size_scale_
+			p3_ = pose3_b[ii]
+			p3_[:, 0:2] = p3_[:, 0:2] / size_scale_
+			p3_[:, 2] = p3_[:, 2] / np.mean(size_scale_)
+			p3_[:, 2] *= self.FLAG.mul_factor
+			p3_[:, 2] += self.FLAG.volume_res / 2
+			
+			
+			
+			
+			for jj in xrange(14):
+				for kk in xrange(self.FLAG.volume_res):
+					vec_x[jj, kk] = utils.data_prep.gaussian(kk, p3_[jj, 0],
+					                                         self.FLAG.sigma,
+					                                         self.FLAG.joint_prob_max)
+					vec_y[jj, kk] = utils.data_prep.gaussian(kk, p3_[jj, 1], self.FLAG.sigma,
+					                                         self.FLAG.joint_prob_max)
+					vec_z[jj, kk] = utils.data_prep.gaussian(kk, p3_[jj, 2], self.FLAG.sigma,
+					                                         self.FLAG.joint_prob_max)
+					
+			pose2.append(p2_)
+			pose3.append(p3_)
+			image.append(im_)
+		
+		self.train_iter += 1
+		
+		
+		return image, pose2, pose3, imgFiles_, vec_x, vec_y, vec_z

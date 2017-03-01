@@ -29,21 +29,21 @@ FLAG = utils.get_flags.get_flags()
 
 
 def main(_):
-  if not FLAG.dataset_dir:
-    raise ValueError('You must supply the dataset directory with --dataset_dir')
-  
-  DataHolder = utils.train_utils.DataHolder(FLAG)
+	if not FLAG.dataset_dir:
+		raise ValueError('You must supply the dataset directory with --dataset_dir')
 
-  print('data loaded... phhhh')
+	_time = time.clock()
+	DataHolder = utils.train_utils.DataHolder(FLAG)
+	print ('Time To lead the mats',time.clock() - _time)
+	
+	print('data loaded... phhhh')
 	
 
-  with tf.Graph().as_default():
-		
-		#builder = include.hg_graph_builder.HGgraphBuilder(FLAG)
+	with tf.Graph().as_default():
+		_time = time.clock()
 		builder = include.hg_graph_builder.HGgraphBuilder_MultiGPU(FLAG)
 		print ("build finished, There it stands, tall and strong...")
-		
-		
+		print ("time to load network", time.clock() - _time)
 		config = tf.ConfigProto()
 		config.gpu_options.allow_growth = True
 	
@@ -66,19 +66,19 @@ def main(_):
 				else:
 					# Restores from checkpoint with relative path.
 					saver.restore(sess, os.path.join(FLAG.load_ckpt_path,
-					                                 ckpt.model_checkpoint_path))
+																					 ckpt.model_checkpoint_path))
 				
 				# Assuming model_checkpoint_path looks something like:
 				#   /my-favorite-path/imagenet_train/model.ckpt-0,
 				# extract global_step from it.
 				global_step = ckpt.model_checkpoint_path.split('/')[-1].split('-')[-1]
 				print('Succesfully loaded model from %s at step=%s.' %
-				      (ckpt.model_checkpoint_path, global_step))
+							(ckpt.model_checkpoint_path, global_step))
 			else:
 				print('No checkpoint file found')
-				#tf.global_variables_initializer().run()
-				saver.restore(sess, FLAG.eval_dir+"/tmp/model" +
-							                       FLAG.structure_string+".ckpt")
+				tf.global_variables_initializer().run()
+				#saver.restore(sess, FLAG.eval_dir+"/tmp/model" +
+				#														 FLAG.structure_string+".ckpt")
 				print('model Initialized...')
 			
 	
@@ -93,25 +93,27 @@ def main(_):
 					
 					if step % 100 == 99:  # Record execution stats
 							save_path = saver.save(sess,
-							                       FLAG.eval_dir+"/tmp/model" +
-							                       FLAG.structure_string+".ckpt")
+																		 FLAG.eval_dir+"/tmp/model" +
+																		 FLAG.structure_string+".ckpt")
 							print('Adding Model data for ', step, 'at ', save_path)
 					
 					if step % 10000 == 9999:  # Record execution stats
 							save_path = saver.save(sess, FLAG.checkpoint_dir +
-							                       '/model_%05d_' %
-							                       step + FLAG.structure_string  +'.ckpt')
+																		 '/model_%05d_' %
+																		 step + FLAG.structure_string  +'.ckpt')
 							print('Adding Model data for ', step, 'at ', save_path)
 					
 					_x = []
 					y = []
 					gt = []
-					
+					_time = time.clock()
 					for i in map(int, FLAG.gpu_string.split('-')):
 						fd = DataHolder.get_next_train_batch()
 						_x.append(fd[0])
 						y.append(fd[1])
 						gt.append(fd[2])
+					
+					print("Preprocessing Time: ", time.clock() - _time)
 					
 					feed_dict_x = {i:d for i, d in zip(builder._x, _x)}
 					feed_dict_y = {i:d	for i, d in zip(builder.y, y)}
@@ -123,20 +125,20 @@ def main(_):
 					if step % 10 == 1:
 						
 						summary, loss_, _ = sess.run([merged, builder.loss,
-						                              builder.train_rmsprop ], feed_dict_x)
-						                                    
+																					builder.train_rmsprop ], feed_dict_x)
+																								
 						train_writer.add_summary(summary, step)
 						
 						continue
 					
 					
 					loss_, _ = sess.run([builder.loss, builder.train_rmsprop],
-					                             feed_dict_x)
+																			 feed_dict_x)
 							
 					print("Grinding... Loss = " + str(loss_))
 			
 			train_writer.close()
 			test_writer.close()
-		  
+			
 if __name__ == '__main__':
 	tf.app.run()
