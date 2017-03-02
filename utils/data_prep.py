@@ -172,6 +172,40 @@ def volumize_gt(image_b, pose2_b, pose3_b, resize_factor, im_resize_factor, \
 		
 	return batch_data,image, pose2, pose3
 
+
+def get_vector_gt(image_b, pose2_b, pose3_b, FLAG):
+	num_of_data = FLAG.batch_size
+	vec_x = np.empty((FLAG.batch_size,FLAG.num_joints,FLAG.volume_res))
+	vec_y = np.empty((FLAG.batch_size, FLAG.num_joints, FLAG.volume_res))
+	vec_z = np.empty((FLAG.batch_size, FLAG.num_joints, FLAG.volume_res))
+	pose2 = []
+	pose3 = []
+	image = np.empty((FLAG.batch_size, FLAG.image_res, FLAG.image_res, 3))
+	
+	for ii in xrange(num_of_data):
+		# print (ii, im_resize_factor, np.shape(image_b[ii]))
+		im_ = misc.imresize(image_b[ii], (FLAG.image_res, FLAG.image_res))
+		size_scale_ = np.array(np.shape(image_b[ii])[:2], dtype=np.float) / \
+		              np.array(FLAG.volume_res, dtype=np.float)
+		p2_ = pose2_b[ii] / size_scale_
+		p3_ = pose3_b[ii]
+		p3_[:, 0:2] = p3_[:, 0:2] / size_scale_
+		p3_[:, 2] = p3_[:, 2] / np.mean(size_scale_)
+		p3_[:, 2] *= FLAG.mul_factor
+		p3_[:, 2] += FLAG.volume_res / 2
+		
+		for jj in xrange(14):
+			for kk in xrange(FLAG.volume_res):
+				vec_x[ii, jj, kk] = gaussian(kk, p3_[jj, 0], FLAG.sigma, FLAG.joint_prob_max)
+				vec_y[ii, jj, kk] = gaussian(kk, p3_[jj, 1], FLAG.sigma, FLAG.joint_prob_max)
+				vec_z[ii, jj, kk] = gaussian(kk, p3_[jj, 2], FLAG.sigma, FLAG.joint_prob_max)
+		
+		pose2.append(p2_)
+		pose3.append(p3_)
+		image[ii,:,:,:] = im_
+	
+	return image, pose2, pose3, vec_x, vec_y, vec_z
+
 def prepare_output(batch_data,steps = [1, 2, 4, 64]):
 	out_res = np.shape(batch_data)[0]
 	batch_size = np.shape(batch_data)[1]
