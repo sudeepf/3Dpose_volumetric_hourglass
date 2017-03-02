@@ -78,7 +78,18 @@ class HGgraphBuilder_MultiGPU():
 							y = tf.placeholder(tf.float32, [None, FLAG.volume_res,
 							                                FLAG.volume_res, FLAG.volume_res ,
 							                                FLAG.num_joints])
-
+							
+							tensor_x = tf.placeholder(tf.float32,
+							                          [FLAG.batch_size, FLAG.num_joints,
+							                           FLAG.volume_res])
+							tensor_y = tf.placeholder(tf.float32,
+							                          [FLAG.batch_size, FLAG.num_joints,
+							                           FLAG.volume_res])
+							tensor_z = tf.placeholder(tf.float32,
+							                          [FLAG.batch_size, FLAG.num_joints,
+							                           FLAG.volume_res])
+							
+							
 							label = utils.data_prep.prepare_output_gpu(y,steps, FLAG)
 							self.label.append(label)
 

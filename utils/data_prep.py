@@ -206,6 +206,29 @@ def get_vector_gt(image_b, pose2_b, pose3_b, FLAG):
 	
 	return image, pose2, pose3, vec_x, vec_y, vec_z
 
+def volumize_vec_gpu(tensor_x, tensor_y, tensor_z, FLAG):
+	"""
+	
+	:param tensor_x: Probability distribution of GroundTruth along x axis
+	:param tensor_y: Probability distribution of GroundTruth along y axis
+	:param tensor_z: Probability distribution of GroundTruth along z axis
+	:param FLAG: Parameters
+	:return: Volumized representation for all joints in form of
+	Batch - X - Y - Z - Joints
+	
+	"""
+	list_b = []
+	for ii in xrange(FLAG.batch_size):
+		list_j = []
+		for jj in xrange(FLAG.num_joints):
+			vol = tf.matmul(tensor_y[ii, jj:jj + 1],
+			                tf.transpose(tensor_x[ii, jj:jj + 1]))
+			vol = tf.matmul(vol, tensor_z[ii, jj:jj + 1])
+			vol = tf.expand_dims(vol,3)
+			list_j.append(vol)
+		list_b.append(tf.concat(list_j,3))
+	return tf.stack(list_b,0)
+
 def prepare_output(batch_data,steps = [1, 2, 4, 64]):
 	out_res = np.shape(batch_data)[0]
 	batch_size = np.shape(batch_data)[1]

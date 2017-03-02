@@ -104,19 +104,27 @@ def main(_):
 							print('Adding Model data for ', step, 'at ', save_path)
 					
 					_x = []
-					y = []
+					vec_x = []
+					vec_y = []
+					vec_z = []
 					gt = []
 					time_ = time.clock()
 					for i in map(int, FLAG.gpu_string.split('-')):
 						fd = DataHolder.get_next_train_batch()
 						_x.append(fd[0])
-						y.append(fd[1])
-						gt.append(fd[2])
+						vec_x.append(fd[1])
+						vec_y.append(fd[2])
+						vec_z.append(fd[3])
+						gt.append(fd[4])
 					
 					feed_dict_x = {i:d for i, d in zip(builder._x, _x)}
-					feed_dict_y = {i:d	for i, d in zip(builder.y, y)}
-					feed_dict_gt = {i: d for i, d in zip(builder.gt, gt)}
-					feed_dict_x.update(feed_dict_y)
+					feed_dict_vec_x = {i:d for i, d in zip(builder.tensor_x, vec_x)}
+					feed_dict_vec_y = {i:d for i, d in zip(builder.tensor_y, vec_y)}
+					feed_dict_vec_z = {i:d for i, d in zip(builder.tensor_z, vec_z)}
+					feed_dict_gt = {i:d for i, d in zip(builder.gt, gt)}
+					feed_dict_x.update(feed_dict_vec_x)
+					feed_dict_x.update(feed_dict_vec_y)
+					feed_dict_x.update(feed_dict_vec_z)
 					feed_dict_x.update(feed_dict_gt)
 
 					if step % 10 == 1:
