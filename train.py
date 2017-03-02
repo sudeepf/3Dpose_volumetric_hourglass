@@ -76,9 +76,9 @@ def main(_):
 				      (ckpt.model_checkpoint_path, global_step))
 			else:
 				print('No checkpoint file found')
-				#tf.global_variables_initializer().run()
-				saver.restore(sess, FLAG.eval_dir+"/tmp/model" +
-							                       FLAG.structure_string+".ckpt")
+				tf.global_variables_initializer().run()
+				#saver.restore(sess, FLAG.eval_dir+"/tmp/model" +
+				#			                       FLAG.structure_string+".ckpt")
 				print('model Initialized...')
 			
 	
@@ -128,11 +128,11 @@ def main(_):
 						train_writer.add_summary(summary, step)
 						
 						continue
-					
-					
+
+					run_metadata = tf.RunMetadata()
 					loss_, _ = sess.run([builder.loss, builder.train_rmsprop],
 					                             feed_dict_x)
-							
+
 					print("Grinding... Loss = " + str(loss_))
 			
 			train_writer.close()

@@ -83,15 +83,15 @@ class stacked_hourglass():
 		with tf.variable_scope(name) as scope:
 			with tf.variable_scope('norm_conv1') as sc:
 				norm1 = tf.contrib.layers.batch_norm(inputs, 0.9, epsilon=1e-5,
-				                                     activation_fn=tf.nn.relu, scope=sc)
+				                                     activation_fn=tf.nn.relu, scope=sc, fused=True)
 				conv1 = self._conv(norm1, nb_filter_out / 2, 1, 1, 'SAME', name='conv1')
 			with tf.variable_scope('norm_conv2') as sc:
 				norm2 = tf.contrib.layers.batch_norm(conv1, 0.9, epsilon=1e-5,
-				                                     activation_fn=tf.nn.relu, scope=sc)
+				                                     activation_fn=tf.nn.relu, scope=sc, fused=True)
 				conv2 = self._conv(norm2, nb_filter_out / 2, 3, 1, 'SAME', name='conv2')
 			with tf.variable_scope('norm_conv3') as sc:
 				norm3 = tf.contrib.layers.batch_norm(conv2, 0.9, epsilon=1e-5,
-				                                     activation_fn=tf.nn.relu, scope=sc)
+				                                     activation_fn=tf.nn.relu, scope=sc, fused=True)
 				conv3 = self._conv(norm3, nb_filter_out, 1, 1, 'SAME', name='conv3')
 			return conv3
 	

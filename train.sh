@@ -5,5 +5,5 @@ nice -n 10 python train.py \
 --batch_size=2 \
 --joint_prob_max=10 \
 --sigma=1 \
---gpu_string=0-1-2-3 \
+--gpu_string=0 \
 --learning_rate=5e-3

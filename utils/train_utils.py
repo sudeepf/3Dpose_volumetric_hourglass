@@ -78,14 +78,15 @@ class DataHolder():
 		total_dim = np.sum(np.array(steps))
 		
 		if train or not (train):
+
 			image_b, pose2_b, pose3_b = utils.data_prep.get_batch(imgFiles,
 			                                                      pose2, pose3,
 			                                                      self.FLAG)
-			
+
 			image_b, pose2_b, pose3_b = utils.data_prep.crop_data_top_down(image_b,
 			                                                               pose2_b,
 			                                                               pose3_b)
-			
+
 			
 			batch_data, image, pose2, pose3 = utils.data_prep.volumize_gt(image_b,
 			                                                              pose2_b,
@@ -95,13 +96,13 @@ class DataHolder():
 			                                                              self.FLAG.sigma,
 			                                                              self.FLAG.mul_factor,
 			                                                              self.FLAG.joint_prob_max)
-			
+
 			# Batch - Joints - X - Y - Z
 			batch_data = np.swapaxes(batch_data, 1, 4)  # swap Z - Joint
 			# Batch - Z - X - Y - Joints
 			batch_data = np.swapaxes(batch_data, 0, 1)  # swap Joint - Depth
 			# Z- Batch - X - Y - Joints
-			
+
 			batch_output = utils.data_prep.prepare_output(batch_data, steps)
 			# 3D - Batch - Joints - X - Y
 			batch_output = np.rollaxis(batch_output, 0, 5)
@@ -116,7 +117,7 @@ class DataHolder():
 			                          (self.FLAG.batch_size, self.FLAG.volume_res,
 			                           self.FLAG.volume_res,
 			                           total_dim * self.FLAG.num_joints))
-		
+
 		else:
 			print('nothing')
 		# xs, ys = mnist.test.images, mnist.test.labels
