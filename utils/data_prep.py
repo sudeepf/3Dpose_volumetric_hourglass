@@ -129,8 +129,8 @@ def plot_3d(image, threshold=0.5):
 
 
 def volumize_gt(image_b, pose2_b, pose3_b, resize_factor, im_resize_factor, \
-                                                sigma, mul_factor, max_prob):
-	num_of_data = np.shape(image_b)[0]
+                                                sigma, mul_factor, max_prob, FLAG):
+	num_of_data = FLAG.batch_size
 	batch_data = np.empty((0,14,resize_factor,resize_factor,resize_factor))
 	pose2 = []
 	pose3 = []
@@ -209,7 +209,7 @@ def prepare_output_gpu(batch_data,steps, FLAG):
 		for ss in steps:
 			slice_ind = FLAG.volume_res / ss
 			slice_start = 0
-			for slice_end in range(slice_ind-1,FLAG.volume_res,slice_ind):
+			for slice_end in xrange(slice_ind-1,FLAG.volume_res,slice_ind):
 				list_j = []
 				for jj in xrange(FLAG.num_joints):
 					app = tf.expand_dims(tf.reduce_sum(batch_data[b,:,:,slice_start:slice_end+1,jj],2),2)

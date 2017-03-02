@@ -77,9 +77,8 @@ def main(_):
 				      (ckpt.model_checkpoint_path, global_step))
 			else:
 				print('No checkpoint file found')
-				tf.global_variables_initializer().run()
-				#saver.restore(sess, FLAG.eval_dir+"/tmp/model" +
-				#			                       FLAG.structure_string+".ckpt")
+				#tf.global_variables_initializer().run()
+				saver.restore(sess, "./tensor_record//tmp/model1-2-64.ckpt")
 				print('model Initialized...')
 			
 	
@@ -92,7 +91,7 @@ def main(_):
 	
 			for step in range(DataHolder.train_data_size):
 					
-					if step % 100 == 99:  # Record execution stats
+					if step % 1000 == 99:  # Record execution stats
 							save_path = saver.save(sess,
 							                       FLAG.eval_dir+"/tmp/model" +
 							                       FLAG.structure_string+".ckpt")
@@ -119,8 +118,7 @@ def main(_):
 					feed_dict_gt = {i: d for i, d in zip(builder.gt, gt)}
 					feed_dict_x.update(feed_dict_y)
 					feed_dict_x.update(feed_dict_gt)
-					print("Time to get data", time.clock()-time_)
-					time_ = time.clock()
+
 					if step % 10 == 1:
 						
 						summary, loss_, _ = sess.run([merged, builder.loss,
@@ -134,7 +132,6 @@ def main(_):
 					loss_, _ = sess.run([builder.loss, builder.train_rmsprop],
 					                             feed_dict_x)
 
-					print("Time to run nn", time.clock(),time_)
 
 					print("Grinding... Loss = " + str(loss_))
 			

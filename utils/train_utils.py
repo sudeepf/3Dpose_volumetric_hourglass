@@ -95,7 +95,8 @@ class DataHolder():
 			                                                              self.FLAG.image_res,
 			                                                              self.FLAG.sigma,
 			                                                              self.FLAG.mul_factor,
-			                                                              self.FLAG.joint_prob_max)
+			                                                              self.FLAG.joint_prob_max,
+																		  self.FLAG)
 
 			# Batch - Joints - X - Y - Z
 
