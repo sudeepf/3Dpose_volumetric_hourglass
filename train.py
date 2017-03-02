@@ -40,6 +40,7 @@ def main(_):
   with tf.Graph().as_default():
 		
 		#builder = include.hg_graph_builder.HGgraphBuilder(FLAG)
+
 		builder = include.hg_graph_builder.HGgraphBuilder_MultiGPU(FLAG)
 		print ("build finished, There it stands, tall and strong...")
 		
@@ -106,7 +107,7 @@ def main(_):
 					_x = []
 					y = []
 					gt = []
-					
+					time_ = time.clock()
 					for i in map(int, FLAG.gpu_string.split('-')):
 						fd = DataHolder.get_next_train_batch()
 						_x.append(fd[0])
@@ -118,8 +119,8 @@ def main(_):
 					feed_dict_gt = {i: d for i, d in zip(builder.gt, gt)}
 					feed_dict_x.update(feed_dict_y)
 					feed_dict_x.update(feed_dict_gt)
-					
-					
+					print("Time to get data", time.clock()-time_)
+					time_ = time.clock()
 					if step % 10 == 1:
 						
 						summary, loss_, _ = sess.run([merged, builder.loss,
@@ -132,6 +133,8 @@ def main(_):
 					run_metadata = tf.RunMetadata()
 					loss_, _ = sess.run([builder.loss, builder.train_rmsprop],
 					                             feed_dict_x)
+
+					print("Time to run nn", time.clock(),time_)
 
 					print("Grinding... Loss = " + str(loss_))
 			

@@ -3,6 +3,7 @@ import tensorflow as tf
 import numpy as np
 import utils.add_summary
 import utils.eval_utils
+import utils.data_prep
 
 class HGgraphBuilder():
 	def __init__(self, FLAG):
@@ -59,6 +60,7 @@ class HGgraphBuilder_MultiGPU():
 			self.gt = []
 			self.loss = 0
 			self.output = []
+			self.label = []
 			steps = map(int, FLAG.structure_string.split('-'))
 			total_dim = np.sum(np.array(steps))
 			
@@ -74,15 +76,18 @@ class HGgraphBuilder_MultiGPU():
 							                    [None, FLAG.image_res, FLAG.image_res,
 							                     FLAG.image_c])
 							y = tf.placeholder(tf.float32, [None, FLAG.volume_res,
-							                                FLAG.volume_res, FLAG.num_joints *
-							                                total_dim])
-							
+							                                FLAG.volume_res, FLAG.volume_res ,
+							                                FLAG.num_joints])
+
+							label = utils.data_prep.prepare_output_gpu(y,steps, FLAG)
+							self.label.append(label)
+
 							# If I ever write a handle for accuracy computation in TF
 							gt = tf.placeholder(tf.float32, [None, FLAG.num_joints,
 							                                 3])
 							
 							
-							loss, output = self.tower_loss(_x, y, gt, steps,
+							loss, output = self.tower_loss(_x, label, gt, steps,
 							                       scope,FLAG, 'GPU_%d' % (i))
 							
 							# Reuse variables for the next tower.
@@ -111,10 +116,10 @@ class HGgraphBuilder_MultiGPU():
 			self.loss /= len(map(int, FLAG.gpu_string.split('-')))
 			
 			utils.add_summary.add_all_joints(
-				utils.eval_utils.get_precision_MultiGPU(self.output,self.y,[], FLAG),
+				utils.eval_utils.get_precision_MultiGPU(self.output,self.label,[], FLAG),
 				FLAG)
 			
-			utils.add_summary.add_all(self._x[0], self.y[0], self.output[0],
+			utils.add_summary.add_all(self._x[0], self.label[0], self.output[0],
 			                          self.loss)
 			# We must calculate the mean of each gradient. Note that this is the
 			# synchronization point across all towers.

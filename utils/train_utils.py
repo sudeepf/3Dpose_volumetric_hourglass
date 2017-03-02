@@ -98,31 +98,17 @@ class DataHolder():
 			                                                              self.FLAG.joint_prob_max)
 
 			# Batch - Joints - X - Y - Z
-			batch_data = np.swapaxes(batch_data, 1, 4)  # swap Z - Joint
-			# Batch - Z - X - Y - Joints
-			batch_data = np.swapaxes(batch_data, 0, 1)  # swap Joint - Depth
-			# Z- Batch - X - Y - Joints
 
-			batch_output = utils.data_prep.prepare_output(batch_data, steps)
-			# 3D - Batch - Joints - X - Y
-			batch_output = np.rollaxis(batch_output, 0, 5)
-			# Batch - J - X - Y - 3D
-			batch_output = np.rollaxis(batch_output, 1, 5)
-			# Batch - X - Y - 3D - Joints
-			
-			# from string model struct to list model struct
-			
-			
-			batch_output = np.reshape(batch_output,
-			                          (self.FLAG.batch_size, self.FLAG.volume_res,
-			                           self.FLAG.volume_res,
-			                           total_dim * self.FLAG.num_joints))
+
+			batch_data = np.rollaxis(batch_data, 1, 5)  # swap Z - Joint
+
+
 
 		else:
 			print('nothing')
 		# xs, ys = mnist.test.images, mnist.test.labels
 		# k = 1.0
-		return image, batch_output, pose3
+		return image, batch_data, pose3
 
 	def get_next_train_batch(self):
 		"""

@@ -6,6 +6,7 @@ from scipy import misc
 import matplotlib.pyplot as plt
 from skimage import measure, morphology
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
+import tensorflow as tf
 
 def get_list_all_training_frames(list_of_mat):
 	
@@ -197,3 +198,24 @@ def prepare_output(batch_data,steps = [1, 2, 4, 64]):
 			slice_start = slice_end + 1
 			
 	return np.array(output)
+
+def prepare_output_gpu(batch_data,steps, FLAG):
+	"""input dims are
+		# Batch - X - Y - Z - Joints
+		We Want #Batch - X- Y- Z_*Joints"""
+	list_b = []
+	for b in xrange(FLAG.batch_size):
+		list_fna = []
+		for ss in steps:
+			slice_ind = FLAG.volume_res / ss
+			slice_start = 0
+			for slice_end in range(slice_ind-1,FLAG.volume_res,slice_ind):
+				list_j = []
+				for jj in xrange(FLAG.num_joints):
+					app = tf.expand_dims(tf.reduce_sum(batch_data[b,:,:,slice_start:slice_end+1,jj],2),2)
+					list_j.append(tf.expand_dims(app,3))
+				list_fna.append(tf.concat(list_j,3))
+				slice_start = slice_end + 1
+		list_b.append(tf.concat(list_fna,2))
+	out_ =  tf.stack(list_b,0)
+	return tf.reshape(out_,[FLAG.batch_size,FLAG.volume_res,FLAG.volume_res,FLAG.num_joints*sum(steps)])
