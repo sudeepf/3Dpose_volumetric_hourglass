@@ -119,4 +119,4 @@ class DataHolder():
 			self.train_iter = 0
 			self.mask_train = np.random.permutation(self.train_data_size)
 			
-		return fd[0], fd[1], fd[2]
+		return fd[0], fd[1], fd[2], fd[3], fd[4]

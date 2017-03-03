@@ -33,7 +33,7 @@ def get_list_all_training_frames(list_of_mat):
 def get_batch(imgFiles, pose2, pose3, FLAG):
 	data = []
 	for name in imgFiles:
-		im = misc.imread(name[:])
+		im = misc.imread(name[1:])
 		data.append(im)
 	return np.array(data), pose2, pose3
 
@@ -221,9 +221,11 @@ def volumize_vec_gpu(tensor_x, tensor_y, tensor_z, FLAG):
 	for ii in xrange(FLAG.batch_size):
 		list_j = []
 		for jj in xrange(FLAG.num_joints):
-			vol = tf.matmul(tensor_y[ii, jj:jj + 1],
-			                tf.transpose(tensor_x[ii, jj:jj + 1]))
-			vol = tf.matmul(vol, tensor_z[ii, jj:jj + 1])
+			vol = tf.matmul(tf.transpose(tensor_y[ii, jj:jj + 1]),
+			                tensor_x[ii, jj:jj + 1])
+			vol = tf.reshape(vol,[1,FLAG.volume_res, FLAG.volume_res])
+			vol = tf.tensordot( vol, tf.transpose(tensor_z[ii, jj:jj + 1]),  axes=[[
+				0],[1]])
 			vol = tf.expand_dims(vol,3)
 			list_j.append(vol)
 		list_b.append(tf.concat(list_j,3))
