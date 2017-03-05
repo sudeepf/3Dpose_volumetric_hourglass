@@ -77,9 +77,8 @@ def main(_):
 				      (ckpt.model_checkpoint_path, global_step))
 			else:
 				print('No checkpoint file found')
-				tf.global_variables_initializer().run()
-				#saver.restore(sess, FLAG.eval_dir+"/tmp/model" +
-				#			                       FLAG.structure_string+".ckpt")
+				#tf.global_variables_initializer().run()
+				saver.restore(sess, "./tensor_record//tmp/model1-2-4-64.ckpt")
 				print('model Initialized...')
 			
 	
@@ -92,7 +91,7 @@ def main(_):
 	
 			for step in range(DataHolder.train_data_size):
 					
-					if step % 100 == 99:  # Record execution stats
+					if step % 1000 == 99:  # Record execution stats
 							save_path = saver.save(sess,
 							                       FLAG.eval_dir+"/tmp/model" +
 							                       FLAG.structure_string+".ckpt")
@@ -105,22 +104,32 @@ def main(_):
 							print('Adding Model data for ', step, 'at ', save_path)
 					
 					_x = []
-					y = []
+					vec_x = []
+					vec_y = []
+					vec_z = []
 					gt = []
 					time_ = time.clock()
 					for i in map(int, FLAG.gpu_string.split('-')):
 						fd = DataHolder.get_next_train_batch()
 						_x.append(fd[0])
-						y.append(fd[1])
-						gt.append(fd[2])
+						vec_x.append(fd[1])
+						vec_y.append(fd[2])
+						vec_z.append(fd[3])
+						gt.append(fd[4])
 					
 					feed_dict_x = {i:d for i, d in zip(builder._x, _x)}
-					feed_dict_y = {i:d	for i, d in zip(builder.y, y)}
-					feed_dict_gt = {i: d for i, d in zip(builder.gt, gt)}
-					feed_dict_x.update(feed_dict_y)
+					feed_dict_vec_x = {i:d for i, d in zip(builder.tensor_x, vec_x)}
+					feed_dict_vec_y = {i:d for i, d in zip(builder.tensor_y, vec_y)}
+					feed_dict_vec_z = {i:d for i, d in zip(builder.tensor_z, vec_z)}
+					feed_dict_gt = {i:d for i, d in zip(builder.gt, gt)}
+					feed_dict_x.update(feed_dict_vec_x)
+					feed_dict_x.update(feed_dict_vec_y)
+					feed_dict_x.update(feed_dict_vec_z)
 					feed_dict_x.update(feed_dict_gt)
-					print("Time to get data", time.clock()-time_)
+					
+					#print ("PreProcessing Time - incd reading", time.clock()-time_)
 					time_ = time.clock()
+					
 					if step % 10 == 1:
 						
 						summary, loss_, _ = sess.run([merged, builder.loss,
@@ -134,8 +143,7 @@ def main(_):
 					loss_, _ = sess.run([builder.loss, builder.train_rmsprop],
 					                             feed_dict_x)
 
-					print("Time to run nn", time.clock(),time_)
-
+					#print("Time to feed and run the network", time.clock()-time_)
 					print("Grinding... Loss = " + str(loss_))
 			
 			train_writer.close()

@@ -61,6 +61,9 @@ class HGgraphBuilder_MultiGPU():
 			self.loss = 0
 			self.output = []
 			self.label = []
+			self.tensor_x = []
+			self.tensor_y = []
+			self.tensor_z = []
 			steps = map(int, FLAG.structure_string.split('-'))
 			total_dim = np.sum(np.array(steps))
 			
@@ -75,10 +78,20 @@ class HGgraphBuilder_MultiGPU():
 							_x = tf.placeholder(tf.float32,
 							                    [None, FLAG.image_res, FLAG.image_res,
 							                     FLAG.image_c])
-							y = tf.placeholder(tf.float32, [None, FLAG.volume_res,
-							                                FLAG.volume_res, FLAG.volume_res ,
-							                                FLAG.num_joints])
-
+							
+							tensor_x = tf.placeholder(tf.float32,
+							                          [FLAG.batch_size, FLAG.num_joints,
+							                           FLAG.volume_res])
+							tensor_y = tf.placeholder(tf.float32,
+							                          [FLAG.batch_size, FLAG.num_joints,
+							                           FLAG.volume_res])
+							tensor_z = tf.placeholder(tf.float32,
+							                          [FLAG.batch_size, FLAG.num_joints,
+							                           FLAG.volume_res])
+							
+							y = utils.data_prep.volumize_vec_gpu(tensor_x, tensor_y,
+							                                     tensor_z, FLAG)
+							
 							label = utils.data_prep.prepare_output_gpu(y,steps, FLAG)
 							self.label.append(label)
 
@@ -106,7 +119,9 @@ class HGgraphBuilder_MultiGPU():
 							self._x.append(_x)
 							self.y.append(y)
 							self.gt.append(gt)
-							
+							self.tensor_x.append(tensor_x)
+							self.tensor_y.append(tensor_y)
+							self.tensor_z.append(tensor_z)
 							self.loss += loss
 					
 					tf.summary.scalar(('GPU_%d_' % (i)) + 'loss', loss)

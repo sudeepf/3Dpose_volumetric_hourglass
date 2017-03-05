@@ -86,21 +86,9 @@ class DataHolder():
 			image_b, pose2_b, pose3_b = utils.data_prep.crop_data_top_down(image_b,
 			                                                               pose2_b,
 			                                                               pose3_b)
-
 			
-			batch_data, image, pose2, pose3 = utils.data_prep.volumize_gt(image_b,
-			                                                              pose2_b,
-			                                                              pose3_b,
-			                                                              self.FLAG.volume_res,
-			                                                              self.FLAG.image_res,
-			                                                              self.FLAG.sigma,
-			                                                              self.FLAG.mul_factor,
-			                                                              self.FLAG.joint_prob_max)
-
-			# Batch - Joints - X - Y - Z
-
-
-			batch_data = np.rollaxis(batch_data, 1, 5)  # swap Z - Joint
+			image, pose2, pose3, vec_x, vec_y, vec_z = \
+				utils.data_prep.get_vector_gt( image_b, pose2_b, pose3_b, self.FLAG )
 
 
 
@@ -108,7 +96,7 @@ class DataHolder():
 			print('nothing')
 		# xs, ys = mnist.test.images, mnist.test.labels
 		# k = 1.0
-		return image, batch_data, pose3
+		return image, vec_x, vec_y, vec_z, pose3
 
 	def get_next_train_batch(self):
 		"""
@@ -131,4 +119,4 @@ class DataHolder():
 			self.train_iter = 0
 			self.mask_train = np.random.permutation(self.train_data_size)
 			
-		return fd[0], fd[1], fd[2]
+		return fd[0], fd[1], fd[2], fd[3], fd[4]
