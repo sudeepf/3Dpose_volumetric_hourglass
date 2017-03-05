@@ -77,8 +77,8 @@ def main(_):
 				      (ckpt.model_checkpoint_path, global_step))
 			else:
 				print('No checkpoint file found')
-				tf.global_variables_initializer().run()
-				#saver.restore(sess, "./tensor_record//tmp/model1-2-64.ckpt")
+				#tf.global_variables_initializer().run()
+				saver.restore(sess, "./tensor_record//tmp/model1-2-4-64.ckpt")
 				print('model Initialized...')
 			
 	
@@ -127,7 +127,7 @@ def main(_):
 					feed_dict_x.update(feed_dict_vec_z)
 					feed_dict_x.update(feed_dict_gt)
 					
-					print ("PreProcessing Time - incd reading", time.clock()-time_)
+					#print ("PreProcessing Time - incd reading", time.clock()-time_)
 					time_ = time.clock()
 					
 					if step % 10 == 1:
@@ -143,7 +143,7 @@ def main(_):
 					loss_, _ = sess.run([builder.loss, builder.train_rmsprop],
 					                             feed_dict_x)
 
-					print("Time to feed and run the network", time.clock()-time_)
+					#print("Time to feed and run the network", time.clock()-time_)
 					print("Grinding... Loss = " + str(loss_))
 			
 			train_writer.close()
