@@ -53,8 +53,8 @@ class TestDataHolder():
 		self.mask_test = np.random.permutation(self.test_data_size)
 	
 	def read_mat_files(self):
-		self.imgFiles_test, self.pose2_test, self.pose3_test = \
-			data_prep.get_list_all_training_frames(self.mFiles_test)
+		self.imgFiles_test, self.pose2_test, self.pose3_test, self.gt = \
+			data_prep.get_list_all_testing_frames(self.mFiles_test)
 	
 	def get_test_set(self, train, imgFiles, pose2, pose3):
 		"""Make a TensorFlow feed_dict: maps data onto Tensor placeholders."""
@@ -81,16 +81,10 @@ class TestDataHolder():
 		
 		offset = min((self.train_iter * self.FLAG.batch_size), \
 		             (self.test_data_size - self.FLAG.batch_size))
-		mask_ = self.mask_train[offset:(offset + self.FLAG.batch_size)]
+		mask_ = self.mask_test[offset:(offset + self.FLAG.batch_size)]
 		
-		fd = self.get_dict(True, self.imgFiles[mask_], self.pose2[mask_],
-		                   self.pose3[mask_])
+		fd = self.get_test_set(True, self.imgFiles_test[mask_], self.pose2_test[mask_],
+		                   self.pose3_test[mask_])
 		
 		self.train_iter += 1
-		
-		if self.train_iter * self.FLAG.batch_size > self.test_data_size:
-			print('<<<<<<<<<<<<<<<<<:Epoch:>>>>>>>>>>>>>>>>> ')
-			self.train_iter = 0
-			self.mask_train = np.random.permutation(self.test_data_size)
-		
-		return fd[0], fd[1], fd[2], fd[3], fd[4]
+		return fd[0], fd[1], fd[2], fd[3], fd[4], self.gt[mask_]

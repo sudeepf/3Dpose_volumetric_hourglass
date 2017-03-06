@@ -62,7 +62,7 @@ def get_flags(config_file = None):
 	                            """Volume Resolution of the output""")
 	tf.app.flags.DEFINE_integer('num_joints', 14,
 	                            """Total number of joints tobe estimated""")
-	tf.app.flags.DEFINE_integer('mul_factor', 500,
+	tf.app.flags.DEFINE_integer('mul_factor', 1,
 	                            """factor to be mult with Z data to conv to cm""")
 	tf.app.flags.DEFINE_float('sigma', 2,
 	                            """sigma value for probability distribution in

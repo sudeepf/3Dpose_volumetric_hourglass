@@ -11,7 +11,7 @@ def compute_precision(prediction, gt, steps, mul_factor, num_joints):
 	joint_wise_error = np.zeros((num_joints))
 	for ii, pred_cord in enumerate(predictions_cord):
 		gt_ = gt[ii]
-		
+
 		pred_cord = pred_cord.astype(float)
 		# Get Root Joints ie Hips
 		RJ1_pred = pred_cord[8, :]
@@ -43,9 +43,10 @@ def compute_precision(prediction, gt, steps, mul_factor, num_joints):
 		# plt.show()
 		
 		for jj in xrange(num_joints):
-			joint_wise_error[jj] += (np.linalg.norm(pred_cord[jj] - gt_[jj]))
+			joint_wise_error[jj] += (np.linalg.norm(pred_cord[jj] - gt_[
+				jj]))
 	
-	return joint_wise_error / np.shape(prediction)[0]
+	return (joint_wise_error / np.shape(prediction)[0])
 
 
 def get_coordinate(prediction, steps, num_joints):

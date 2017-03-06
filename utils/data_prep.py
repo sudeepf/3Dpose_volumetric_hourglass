@@ -30,6 +30,28 @@ def get_list_all_training_frames(list_of_mat):
 	return files, pose2, pose3
 
 
+def get_list_all_testing_frames(list_of_mat):
+	pose3_ = []
+	pose2_ = []
+	files_ = []
+	gt_ = []
+	for ind, mFile in enumerate(list_of_mat):
+		mat = scipy.io.loadmat(mFile)
+		pose2_.append(mat['poses2'])
+		pose3_.append(mat['poses3'])
+		files_.append(mat['imgs'])
+		gt_.append(mat['p3GT'])
+		ratio = 100 * (float(ind) / float(len(list_of_mat)))
+		if ratio % 10 == 0:
+			print('Successfully loaded -> ', ratio, '%')
+	
+	pose3 = np.concatenate(pose3_, axis=0)
+	pose2 = np.concatenate(pose2_, axis=0)
+	files = np.concatenate(files_, axis=0)
+	gt = np.concatenate(gt_, axis=0)
+	return files, pose2, pose3, gt
+
+
 def get_batch(imgFiles, pose2, pose3, FLAG):
 	data = []
 	for name in imgFiles:
