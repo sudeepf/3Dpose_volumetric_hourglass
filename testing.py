@@ -63,55 +63,34 @@ def main(_):
 			# Train the model, and also write summaries.
 			# Every 10th step, measure test-set accuracy, and write test summaries
 			# All other steps, run train_step on training data, & add training summaries
-			
+			yo = []
 			for step in range(DataHolder.test_data_size):
 				
 				_x = []
-				vec_x = []
-				vec_y = []
-				vec_z = []
 				gt = []
-				time_ = time.clock()
 				for i in map(int, FLAG.gpu_string.split('-')):
-					fd = DataHolder.get_next_train_batch()
+					fd = DataHolder.get_next_test_batch()
 					_x.append(fd[0])
-					vec_x.append(fd[1])
-					vec_y.append(fd[2])
-					vec_z.append(fd[3])
 					gt.append(fd[5])
-				
 				feed_dict_x = {i: d for i, d in zip(builder._x, _x)}
-				feed_dict_vec_x = {i: d for i, d in zip(builder.tensor_x, vec_x)}
-				feed_dict_vec_y = {i: d for i, d in zip(builder.tensor_y, vec_y)}
-				feed_dict_vec_z = {i: d for i, d in zip(builder.tensor_z, vec_z)}
-				feed_dict_gt = {i: d for i, d in zip(builder.gt, gt)}
-				feed_dict_x.update(feed_dict_vec_x)
-				feed_dict_x.update(feed_dict_vec_y)
-				feed_dict_x.update(feed_dict_vec_z)
-				feed_dict_x.update(feed_dict_gt)
 					
 				time_ = time.clock()
-				output_, label_ = sess.run([builder.output, builder.label], feed_dict_x)
+				output_ = sess.run([builder.output], feed_dict_x)
 				print("Time to feed and run the network", time.clock() - time_)
 				steps = map(int, FLAG.structure_string.split('-'))
-				total_dim = np.sum(np.array(steps))
-				disp_out = output_[0][0]
-				print (np.shape(disp_out))
-				disp_out = np.reshape(disp_out, (64,64,total_dim,14))
-				fig = plt.figure()
-				a=fig.add_subplot(1,2,1)
-				plt.imshow(np.sum(output_[0][0,:,:,:14],axis=2))
-				a=fig.add_subplot(1,2,2)
-				plt.imshow(_x[0][0])
-				plt.show()
-				utils.data_prep.plot_3d(np.sum(disp_out[:,:,-64:,:],3))
+				ypy = 0
+				for i in map(int, FLAG.gpu_string.split('-')):
+					ypy += utils.eval_utils.compute_precision(output_[i], gt[i],
+					                                         steps, FLAG.mul_factor, 14)
+				ypy /= len(map(int, FLAG.gpu_string.split('-')))
+				print("Mean Error",np.sum(ypy)/14)
+				yo.append(ypy)
 				
-				yo = (utils.eval_utils.compute_precision(output_[0], gt[0],
-				                                         steps, FLAG.mul_factor, 14))
-				
-				print("Total error",np.sum(yo))
-				print ( "Mean Error", np.sum(yo)/14)
-				print (yo)
+			print("Total error",np.sum(np.sum(np.stack(
+				yo)))/DataHolder.test_data_size)
+			print ( "Mean Error", ((np.sum(np.sum(np.stack(
+				yo)))/DataHolder.test_data_size)/14))
+			
 
 if __name__ == '__main__':
 	tf.app.run()

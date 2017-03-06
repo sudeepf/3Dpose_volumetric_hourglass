@@ -38,9 +38,9 @@ def compute_precision(prediction, gt, steps, mul_factor, num_joints):
 		pred_cord[:, 2] /= mul_factor
 		pred_cord[:, :] *= scale_
 		
-		# plt.scatter(x=pred_cord[:, 0], y=pred_cord[:, 1], c='r')
-		# plt.scatter(x=gt_[:, 0], y=gt_[:, 1], c='b')
-		# plt.show()
+		#plt.scatter(x=pred_cord[:, 0], y=pred_cord[:, 1], c='r')
+		#plt.scatter(x=gt_[:, 0], y=gt_[:, 1], c='b')
+		#plt.show()
 		
 		for jj in xrange(num_joints):
 			joint_wise_error[jj] += (np.linalg.norm(pred_cord[jj] - gt_[
