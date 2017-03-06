@@ -69,7 +69,7 @@ def main(_):
 				_x = []
 				gt = []
 				for i in map(int, FLAG.gpu_string.split('-')):
-					fd = DataHolder.get_next_test_batch()
+					fd = DataHolder.get_next_train_batch()
 					_x.append(fd[0])
 					gt.append(fd[5])
 				feed_dict_x = {i: d for i, d in zip(builder._x, _x)}
