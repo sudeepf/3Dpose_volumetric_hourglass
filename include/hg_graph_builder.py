@@ -49,8 +49,9 @@ class HGgraphBuilder_MultiGPU():
 			
 			self.optimizer = tf.train.RMSPropOptimizer(FLAG.learning_rate)
 			global_step = tf.get_variable(
-				'global_step', [],
-				initializer=tf.constant_initializer(0), trainable=False)
+			        'global_step', [],
+			        initializer=tf.constant_initializer(0), trainable=False)
+
 			
 			tower_grads = []
 			

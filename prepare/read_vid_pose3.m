@@ -1,10 +1,10 @@
 % Read imagefiles and 3D pose
 
-subjects = ['S1'];
+subjects = [  'S0'];
 % Dataset Paths 
-for iok=1:2:length(subjects)
+for iok=1:length(subjects)
     subject = subjects(iok:iok+1);
-    path = ['/home/sudeep/projects/AmazonLab126/3Dpose/Dataset/',subject];
+    path = ['/home/capstone/Sudeep/Capstone/3Dpose/Dataset/',subject];
     vPath = [path,'/Videos/'];
     pPath = [path,'/Pose/D3_Positions_mono/'];
     p2Path = [path,'/Pose/D2_Positions/'];
@@ -37,7 +37,7 @@ for iok=1:2:length(subjects)
         matName = [matPath,'/',fName,'.mat'];
         %% Looping over all the images and pose files 
         for j = 1:1:length(p3D)
-            imN = iName(2*j).name;
+            imN = iName(j).name;
             %im = imread([vPath,fName,'/',imN]);
             p3d = p3D(j,:);
             p2d = p2D(j,:);

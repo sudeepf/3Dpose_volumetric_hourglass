@@ -9,6 +9,7 @@ def compute_precision(prediction, gt, steps, mul_factor, num_joints):
 	"""" Given prediction stack, GT coordinates and scale between two """
 	predictions_cord = get_coordinate(prediction, steps, num_joints)
 	joint_wise_error = np.zeros((num_joints))
+	data_point = 0
 	for ii, pred_cord in enumerate(predictions_cord):
 		gt_ = gt[ii]
 
@@ -31,10 +32,11 @@ def compute_precision(prediction, gt, steps, mul_factor, num_joints):
 		# Get Root limb length
 		RL_pred = np.linalg.norm(RJ1_pred[0:2] - RJ2_pred[0:2])
 		RL_gt = np.linalg.norm(RJ1_gt[0:2] - RJ2_gt[0:2])
-		
+		if RL_gt < 1e-4 or RL_pred == 0:
+			continue
 		# Get scale from limb length
 		scale_ = RL_gt / RL_pred
-		
+		data_point += 1
 		pred_cord[:, 2] /= mul_factor
 		pred_cord[:, :] *= scale_
 		
@@ -46,7 +48,7 @@ def compute_precision(prediction, gt, steps, mul_factor, num_joints):
 			joint_wise_error[jj] += (np.linalg.norm(pred_cord[jj] - gt_[
 				jj]))
 	
-	return (joint_wise_error / np.shape(prediction)[0])
+	return (joint_wise_error / data_point)
 
 
 def get_coordinate(prediction, steps, num_joints):

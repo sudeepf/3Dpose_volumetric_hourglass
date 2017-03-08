@@ -64,7 +64,7 @@ def main(_):
 			# Every 10th step, measure test-set accuracy, and write test summaries
 			# All other steps, run train_step on training data, & add training summaries
 			yo = []
-			for step in range(DataHolder.test_data_size):
+			for step in range(100):
 				
 				_x = []
 				gt = []
@@ -79,8 +79,8 @@ def main(_):
 				print("Time to feed and run the network", time.clock() - time_)
 				steps = map(int, FLAG.structure_string.split('-'))
 				ypy = 0
-				for i in map(int, FLAG.gpu_string.split('-')):
-					ypy += utils.eval_utils.compute_precision(output_[i], gt[i],
+				for idh in xrange(len(map(int, FLAG.gpu_string.split('-')))):
+					ypy += utils.eval_utils.compute_precision(output_[idh][0], gt[idh],
 					                                         steps, FLAG.mul_factor, 14)
 				ypy /= len(map(int, FLAG.gpu_string.split('-')))
 				print("Mean Error",np.sum(ypy)/14)

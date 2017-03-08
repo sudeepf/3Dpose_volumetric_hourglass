@@ -50,7 +50,8 @@ def main(_):
 	
 		saver = tf.train.Saver()
 	
-		with tf.Session(config=config) as sess:
+		#with tf.Session(config=config) as sess:
+		with tf.Session() as sess:
 			merged = tf.summary.merge_all()
 	
 			# All the variable initialiezed in MoFoking RunTime
