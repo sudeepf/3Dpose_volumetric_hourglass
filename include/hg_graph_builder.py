@@ -170,7 +170,7 @@ class HGgraphBuilder_MultiGPU():
 		
 		
 			
-	#with tf.variable_scope(scope):
+		#with tf.variable_scope(scope):
 	
 		output = hg.stacked_hourglass(steps, 'stacked_hourglass')(_x)
 	
