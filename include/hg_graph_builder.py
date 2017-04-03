@@ -181,6 +181,10 @@ class HGgraphBuilder_MultiGPU():
         
         output = hg.stacked_hourglass(steps, 'stacked_hourglass')(_x)
         
+        # Apply sigmoid over output should do the same as applying on each
+        # output individually
+        
+        output = tf.nn.sigmoid(output, 'sigmoid_layer')
         # Defining Loss with root mean square error
         loss = tf.reduce_mean(tf.square(output - y))
         

@@ -132,7 +132,9 @@ def data_vis(image, pose2, pose3, Cam_C, ind):
 
 
 def gaussian(x, mu, sig, max_prob):
-    return max_prob * np.exp(-np.power(x - mu, 2.) / (2 * np.power(sig, 2.)))
+    const_ = 1. / (sig * 2.50599)
+    return max_prob * const_ \
+           * np.exp(-np.power(x - mu, 2.) / (2 * np.power(sig, 2.)))
 
 
 def plot_3d(image, threshold=0.5):
