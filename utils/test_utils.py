@@ -153,4 +153,4 @@ def visualize_stickman(cords, image, ind):
     ax.view_init(-50,-50)
     
     #plt.show()
-    plt.savefig('foo_'+str(ind)+'.png', bbox_inches='tight')
+    plt.savefig('vid/foo_'+str(ind)+'.png', bbox_inches='tight')
