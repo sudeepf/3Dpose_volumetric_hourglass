@@ -24,6 +24,7 @@ import include.hg_graph_builder
 
 # Read up and set up all the flag variables
 FLAG = utils.get_flags.get_flags()
+import imageio
 
 
 def main(_):
@@ -32,25 +33,25 @@ def main(_):
             'You must supply the dataset directory with --dataset_dir')
     if not FLAG.dataset_dir:
         raise ValueError('You must supply the model_path with --load_ckpt_path')
-    DataHolder = utils.test_utils.TestDataHolder(FLAG)
+    # DataHolder = utils.test_utils.TestDataHolder(FLAG)
     
     print('data loaded... phhhh')
     
     # Set up formatting for the movie files
-    Writer = animation.writers['ffmpeg']
-    writer = Writer(fps=15, metadata=dict(artist='Me'), bitrate=1800)
+    # Writer = animation.writers['ffmpeg']
+    # writer = Writer(fps=15, metadata=dict(artist='Me'), bitrate=1800)
     
     with tf.Graph().as_default():
         
         # builder = include.hg_graph_builder.HGgraphBuilder(FLAG)
         
-        #builder = include.hg_graph_builder.HGgraphBuilder_MultiGPU(FLAG)
+        builder = include.hg_graph_builder.HGgraphBuilder_MultiGPU(FLAG)
         print("build finished, There it stands, tall and strong...")
         
         config = tf.ConfigProto()
         config.gpu_options.allow_growth = True
         
-        #saver = tf.train.Saver()
+        saver = tf.train.Saver()
         
         with tf.Session(config=config) as sess:
             
@@ -60,7 +61,7 @@ def main(_):
             
             print(FLAG.load_ckpt_path)
             
-            #saver.restore(sess, FLAG.load_ckpt_path)
+            saver.restore(sess, FLAG.load_ckpt_path)
             print('model Initialized...')
             
             print("Let the Testing Begin...")
@@ -69,17 +70,16 @@ def main(_):
             # Every 10th step, measure test-set accuracy, and write test summaries
             # All other steps, run train_step on training data, & add training summaries
             yo = []
-            for step in range(6448):
-                
+            filename = '/home/sudeep/100P.mp4'
+            vid = imageio.get_reader(filename, 'ffmpeg')
+            for step in range(500, 6448, 2):
+                image_l = vid.get_data(step)
+                image_l = image_l[:, 280:1000, :]
+                image_l = misc.imresize(image_l, (256, 256)).astype(
+                    np.float32)
                 _x = []
                 gt = []
-                for i in map(int, FLAG.gpu_string.split('-')):
-                    fd = DataHolder.get_next_train_batch()
-                    _x.append(fd[0])
-                    gt.append(fd[5])
-                if step < 4:
-                    continue
-                
+                _x.append(np.reshape(image_l, (1, 256, 256, 3)))
                 feed_dict_x = {i: d for i, d in zip(builder._x, _x)}
                 
                 time_ = time.clock()
@@ -90,29 +90,13 @@ def main(_):
                 figs = []
                 
                 for idh in xrange(len(map(int, FLAG.gpu_string.split('-')))):
-                    ypy += utils.eval_utils.compute_precision(output_[idh][0],
-                                                              gt[idh],
-                                                              steps,
-                                                              FLAG.mul_factor,
-                                                              14)
-                    
                     pred_cords = utils.eval_utils.get_coordinate(output_[
                                                                      idh][0],
                                                                  steps, 14)
                     # print (pred_cords)
                     utils.test_utils.visualize_stickman(pred_cords[0],
-                                                        fd[0][0], step)
-                
-                ypy /= len(map(int, FLAG.gpu_string.split('-')))
-                print("Mean Error", np.sum(ypy) / 14)
-                yo.append(ypy)
-            
-            print("Total error", np.sum(np.sum(np.stack(
-                yo))) / DataHolder.test_data_size)
-            print("Mean Error", ((np.sum(np.sum(np.stack(
-                yo))) / DataHolder.test_data_size) / 14))
+                                                        image_l, step)
 
 
 if __name__ == '__main__':
     tf.app.run()
-    

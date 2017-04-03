@@ -20,6 +20,7 @@ import utils.add_summary
 import data_prep
 import utils.get_flags
 
+
 class DataHolder():
 	def __init__(self, FLAG):
 		self.FLAG = FLAG

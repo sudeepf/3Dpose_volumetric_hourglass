@@ -7,6 +7,8 @@ import matplotlib.pyplot as plt
 from skimage import measure, morphology
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 import tensorflow as tf
+import pickle
+import cv2 as cv
 
 
 def get_list_all_training_frames(list_of_mat):
@@ -55,8 +57,15 @@ def get_list_all_testing_frames(list_of_mat):
 def get_batch(imgFiles, pose2, pose3, FLAG):
     data = []
     for name in imgFiles:
-        im = misc.imread(name[:])
-        data.append(im)
+        im = misc.imread(name[:]).astype(np.float32)
+        im /= np.max(np.max(np.max(im)))
+        hname = str(name).split('.j')[0] + '.pkl'
+        heat = pickle.load(open(hname, "rb"))
+        heat = cv.resize(heat.astype(np.float32), (im.shape[1], im.shape[0]),
+                                interpolation=cv.INTER_CUBIC)
+        heat /= np.max(np.max(np.max(heat)))
+        data.append(np.append(im,heat,axis=-1))
+        
     return np.array(data), pose2, pose3
 
 
@@ -123,7 +132,9 @@ def data_vis(image, pose2, pose3, Cam_C, ind):
 
 
 def gaussian(x, mu, sig, max_prob):
-    return max_prob * np.exp(-np.power(x - mu, 2.) / (2 * np.power(sig, 2.)))
+    const_ = 1. / (sig * 2.50599)
+    return max_prob * const_ \
+           * np.exp(-np.power(x - mu, 2.) / (2 * np.power(sig, 2.)))
 
 
 def plot_3d(image, threshold=0.5):
@@ -201,11 +212,11 @@ def get_vector_gt(image_b, pose2_b, pose3_b, FLAG):
     vec_z = np.empty((FLAG.batch_size, FLAG.num_joints, FLAG.volume_res))
     pose2 = []
     pose3 = []
-    image = np.empty((FLAG.batch_size, FLAG.image_res, FLAG.image_res, 3))
+    image = np.empty((FLAG.batch_size, FLAG.image_res, FLAG.image_res, 17))
     
     for ii in xrange(num_of_data):
         # print (ii, im_resize_factor, np.shape(image_b[ii]))
-        im_ = misc.imresize(image_b[ii], (FLAG.image_res, FLAG.image_res))
+        im_ = cv.resize(image_b[ii], (FLAG.image_res, FLAG.image_res))
         size_scale_ = np.array(np.shape(image_b[ii])[:2], dtype=np.float) / \
                       np.array(FLAG.volume_res, dtype=np.float)
         p2_ = pose2_b[ii] / size_scale_
