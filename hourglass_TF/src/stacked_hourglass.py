@@ -50,7 +50,7 @@ class stacked_hourglass():
 				                                    14*self.steps[self.nb_stack - 1],
 				                                    1, 1,
 				                                    'VALID', 'out')
-			return tf.concat(out, axis=3)
+			return tf.nn.sigmoid( tf.concat(out, axis=3) )
 	
 	def _conv(self, inputs, nb_filter, kernel_size=1, strides=1, pad='VALID',
 	          name='conv'):

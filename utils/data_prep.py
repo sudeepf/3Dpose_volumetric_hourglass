@@ -102,7 +102,7 @@ def crop_data_top_down(images, pose2, pose3):
         min_ = min_.astype(np.int)
         max_ = max_.astype(np.int)
         im_ = im[min_[1]:max_[1], min_[0]:max_[0]]
-        im_[:,:,:3] /= np.max(np.max(np.max(im_[:,:,:3])))
+        #im_[:,:,:3] /= np.max(np.max(np.max(im_[:,:,:3])))
         p2 -= min_
         p3[:, :2] -= min_
         
@@ -124,7 +124,9 @@ def data_vis(image, pose2, pose3, Cam_C, ind):
 
 
 def gaussian(x, mu, sig, max_prob):
-    return max_prob * np.exp(-np.power(x - mu, 2.) / (2 * np.power(sig, 2.)))
+    const_ = 1. / (sig * 2.50599)
+    return max_prob * const_ \
+           * np.exp(-np.power(x - mu, 2.) / (2 * np.power(sig, 2.)))
 
 
 def plot_3d(image, threshold=0.5):
